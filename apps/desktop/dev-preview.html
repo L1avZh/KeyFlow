@@ -1,0 +1,20 @@
+<!doctype html>
+<!--
+  Dev-only visual harness: mocks the Tauri IPC bridge so the real UI code
+  in src/ can be eyeballed in an ordinary browser tab during development,
+  without a native window. NOT part of the shipped app — not referenced
+  by tauri.conf.json, so `tauri build` never bundles it. Safe to delete;
+  regenerate by hand if needed again.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>KeyFlow (dev preview)</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/dev-preview-mock.ts"></script>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

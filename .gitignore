@@ -1,0 +1,31 @@
+# Rust
+/target/
+Cargo.lock.bak
+
+# Node
+node_modules/
+apps/desktop/dist/
+apps/desktop/dist-ssr/
+npm-debug.log*
+
+# Tauri
+apps/desktop/src-tauri/gen/
+apps/desktop/src-tauri/target/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# KeyFlow runtime data — never commit a real vault or exported secrets
+*.keyflow
+keyflow-export*.json
+*.env
+.env.local
+
+# Icon build scratch
+apps/desktop/src-tauri/icons/icon-source.png.bak
