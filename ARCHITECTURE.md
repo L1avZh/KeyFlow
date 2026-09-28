@@ -45,8 +45,11 @@ keyflow/
 │   │   │                    request/response protocol, local-socket path resolution,
 │   │   │                    and native-messaging wire framing. Kept separate so the
 │   │   │                    two sides can't independently drift apart.
-│   └── keyflow-native-host/ The browser-extension's native messaging host — a thin,
-│                            no-vault-access stdio↔socket relay (see §4).
+│   ├── keyflow-native-host/ The browser-extension's native messaging host — a thin,
+│   │                        no-vault-access stdio↔socket relay (see §4).
+│   └── keyflow-mobile/      UniFFI bridge exposing keyflow-core to Android. Its own
+│                            standalone Cargo workspace (see its Cargo.toml for why) —
+│                            not a root-workspace member. See §7.
 │
 ├── apps/
 │   └── desktop/
@@ -54,6 +57,8 @@ keyflow/
 │       └── src-tauri/        Tauri shell: IPC commands, app state, OS integration
 │                              (clipboard, notifications, global shortcut, OS keychain,
 │                              the local agent socket, native-messaging-host registration).
+│
+├── android/                   Android app (Kotlin, Jetpack Compose) — see §7.
 │
 ├── browser-extension/
 │   └── chrome/                Manifest V3 extension (Chrome/Edge/Chromium) — see §4.
@@ -200,3 +205,57 @@ See `keyflow-core::vault` module docs and SECURITY.md §"Vault file
 format" for the exact on-disk JSON structure, atomic-write strategy
 (write to a temp file, read it back and verify it decrypts, then
 `rename()` over the target), and the crash-recovery rationale.
+
+## 7. Android: reusing the core via UniFFI
+
+The desktop app calls `keyflow-core` as a direct, in-process Rust
+dependency (§3). Android needs the same core from Kotlin, across a real
+language/FFI boundary — the same architectural problem `dto.rs` already
+solved once for the Tauri IPC boundary (plain DTOs mirroring
+`keyflow-core` types, never exposing them directly), so `keyflow-mobile`
+follows that precedent rather than inventing a new one.
+
+**Why UniFFI, not hand-written JNI**: `keyflow-core` is 100% synchronous
+(no tokio/async — checked, zero hits), and its public API is small and
+stable enough that UniFFI's proc-macro attributes
+(`#[derive(uniffi::Record)]`/`#[derive(uniffi::Error)]`/`#[uniffi::export]`)
+generate the entire Kotlin binding layer, including a working
+`AutoCloseable`/reference-counted lifecycle for the opaque `MobileVault`
+object, from the Rust source directly — hand-written JNI would mean
+maintaining that marshalling code by hand for every method, with far more
+surface area for a boundary bug (exactly the class of bug this project's
+security model tries hardest to avoid).
+
+**Boundary design** (`crates/keyflow-mobile/src/lib.rs`):
+- `MobileVault` — a UniFFI *opaque object* wrapping `Mutex<Vault>`, since
+  `Vault` isn't `Clone` and holds live key material. Kotlin gets a handle
+  (`AutoCloseable` — closing it drops the `Arc`, zeroizing the key
+  immediately, not on some future GC pass); Rust retains ownership.
+- `CredentialRecord`, `SecurityOverviewRecord`, `PasswordOptionsRecord`,
+  etc. — plain UniFFI *records*, structurally identical to
+  `apps/desktop/src-tauri/src/dto.rs`'s `CredentialDto` and friends (ids
+  as strings, timestamps as RFC 3339 strings — UniFFI has no native
+  datetime type).
+- `MobileError` — mirrors `KeyflowError` variant-for-variant where the UI
+  plausibly branches on it (`AuthenticationFailed`, `WeakMasterPassword`,
+  etc.); the two variants wrapping non-FFI-safe external error types
+  (`Io`, `Serialization`) are flattened to their message string, the same
+  pragmatic tradeoff the desktop Tauri layer already makes.
+- Borrowed-reference return types (`&[Credential]`, `Vec<&Credential>`,
+  `HashMap<usize, Vec<&Credential>>`) all get cloned into owned,
+  UniFFI-safe types before crossing the boundary — none of `Vault`'s
+  query methods are exposed verbatim.
+
+**On the Kotlin side**, `VaultRepository` is the direct analogue of the
+desktop app's `Mutex<Option<Vault>>` app state (`state.rs`) — "locked" is
+holding no `MobileVault` instance, not a separate boolean guarding a live
+slot. Every call is dispatched onto `Dispatchers.IO`, since none of this
+is async on the Rust side.
+
+**Android Autofill** is new, Android-native plumbing with no desktop
+equivalent to reuse — see SECURITY.md's Android section and ROADMAP.md
+items #16–#18 for what it does, its native-app-matching heuristic
+limitation, and what remains unverified without a real device.
+
+See `android/README.md` for build instructions and exactly which parts
+of the Android app have and haven't been tested.

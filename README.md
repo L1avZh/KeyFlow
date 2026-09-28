@@ -47,9 +47,15 @@ tested individually (protocol, local socket, content-script form
 detection), but loading the actual unpacked extension in a real Chrome
 UI wasn't verified end-to-end, because the development machine's Chrome
 has an enterprise policy disabling unpacked extension loading. Firefox
-and Safari aren't implemented. See [ROADMAP.md](ROADMAP.md) for the
-honest gap list before treating this as a daily-driver replacement for
-your current password manager.
+and Safari aren't implemented. An **Android app** (`android/`) now also
+exists, reusing `keyflow-core` directly via a UniFFI bridge
+(`crates/keyflow-mobile`) rather than reimplementing crypto/vault logic —
+it builds, lints, and passes unit tests (which genuinely exercise the
+real Rust engine, not a mock — see [android/README.md](android/README.md))
+in CI on every push, but has not been run on a real device or emulator,
+since none was available in the environment it was built in. See
+[ROADMAP.md](ROADMAP.md) for the honest gap list before treating this as
+a daily-driver replacement for your current password manager.
 
 ## Features (this release)
 
@@ -93,6 +99,7 @@ your current password manager.
 | Linux ARM64 | Not yet attempted |
 | Browser extension: Chrome/Edge/Chromium | Implemented, unpacked-load only — see [browser-extension/README.md](browser-extension/README.md). Verified piece-by-piece, not yet end-to-end in a real browser UI (see ROADMAP.md) |
 | Browser extension: Firefox/Safari | Architecture-compatible, not implemented |
+| Android | Builds, lints, and passes unit tests in CI (see [android/README.md](android/README.md)); Autofill service and biometric unlock are implemented but not yet run on a real device/emulator |
 
 All release binaries are **unsigned** (see the [release notes](https://github.com/L1avZh/KeyFlow/releases/tag/v0.1.0) for what that means when installing).
 
@@ -150,13 +157,26 @@ a Cargo workspace, so all crates share one `target/` directory — not
 cargo test --workspace
 ```
 
+### Build the Android app
+
+See [android/README.md](android/README.md) for prerequisites (Android
+SDK/NDK, Rust Android targets, cargo-ndk) and full instructions. Short
+version:
+
+```bash
+cd android
+./gradlew :app:assembleDebug
+```
+
 ## Repository layout
 
 ```
 crates/keyflow-core/         Vault, crypto, domain matching, password generator — pure Rust, no UI.
+crates/keyflow-mobile/       UniFFI bridge exposing keyflow-core to the Android app. Own Cargo workspace — see its Cargo.toml.
 crates/keyflow-agent/        Shared protocol/paths between the desktop app and the native host.
 crates/keyflow-native-host/  Browser-extension native messaging host.
 apps/desktop/                Tauri desktop app (Rust backend + vanilla TypeScript frontend).
+android/                     Android app (Kotlin, Jetpack Compose).
 browser-extension/chrome/    Chrome/Edge/Chromium extension (Manifest V3).
 ```
 

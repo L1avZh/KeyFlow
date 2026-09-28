@@ -140,6 +140,50 @@ forgotten.
     `.github/workflows/ci.yml` currently only runs on macOS/ubuntu
     runners for lint+test; full cross-platform *build* verification and
     release artifact generation is future work tied to items #2–#4).
+16. **Android: real-device/emulator verification.** Updated 2026-09-28:
+    the Android app (`android/`) is implemented — Compose UI for
+    onboarding/vault/generator/security dashboard/settings, biometric
+    quick-unlock via Android Keystore, and a real Autofill Framework
+    service, all calling into `keyflow-core` directly through a new
+    UniFFI bridge crate (`crates/keyflow-mobile`) rather than
+    reimplementing crypto. It builds (debug + release AAB/APK, R8
+    verified), lints clean, and 11 unit tests pass against the real
+    host-compiled Rust engine (see `android/README.md`) — all in CI on
+    every push. What's genuinely unverified: nobody has run the app on a
+    real device or emulator, since none was available in the environment
+    it was built in. That means: no confirmation the Autofill service
+    actually offers/fills correctly in a real target app, no confirmation
+    BiometricPrompt's UI/flow works as coded, no Compose UI/instrumented
+    tests exist yet (the test dependencies are wired in, unused), and no
+    manual "new user" walkthrough has happened. Do this before
+    considering the Android app release-ready.
+17. **Android: native-app Autofill matching is a heuristic.** For a
+    WebView-hosted login form, Autofill matching uses the exact same
+    domain-matching engine (`Origin`/`evaluate_match`) the desktop app
+    and browser extension already use — no compromise there. For a
+    *native* app's own login screen (no web domain in the accessibility
+    structure), there is no cryptographically verified link between an
+    Android package name and a saved credential's URL without that
+    target app publishing Digital Asset Links, which KeyFlow does not
+    check. The current fallback (reversing the package's dot-segments
+    into a candidate domain, e.g. `com.github.android` →
+    `android.github.com`, then running that through the same matching
+    engine) is a common industry heuristic, not a verified guarantee —
+    document this limitation to users rather than presenting native-app
+    autofill as equally trustworthy to web-domain autofill.
+18. **Android: saving a new credential from another app's form
+    (Autofill "save" flow) is intentionally not implemented.** The
+    service declines every `onSaveRequest` rather than silently writing
+    whatever the OS captured — see `KeyFlowAutofillService.kt`'s comment.
+    Implementing it properly needs the same review-before-saving step the
+    CSV importer already gives the desktop app (duplicate/weak-password
+    warnings), not a naive write.
+19. **Android: Play Store publication.** Everything short of an actual
+    Play Console submission is prepared (signed-when-configured release
+    AAB, store listing copy, Data Safety draft — see
+    `docs/releases/android.md` and `docs/store-listing/`), but submitting
+    requires a human with Google Play Console account access, which this
+    repository does not have and does not fake having used.
 
 ## Explicitly not planned
 

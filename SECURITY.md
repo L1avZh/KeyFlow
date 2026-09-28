@@ -163,6 +163,49 @@ review:
   can't reach it, and locking down the local socket beyond OS-level
   same-user permissions (see ROADMAP.md).
 
+## Android: security boundaries
+
+The Android app (`android/`) reuses `keyflow-core` directly through a
+thin UniFFI bridge crate (`crates/keyflow-mobile`) — the same Argon2id
+KDF, AES-256-GCM AEAD, and vault-file format as desktop, called via JNA
+from Kotlin, not reimplemented. `crates/keyflow-mobile` itself contains
+no cryptography of its own (see its module doc comment).
+
+- **Quick unlock** (`biometric/BiometricVaultUnlocker.kt`) stores the
+  master password encrypted by an Android Keystore key that requires a
+  fresh `BiometricPrompt` (`BIOMETRIC_STRONG`) authentication for every
+  decryption (`setUserAuthenticationRequired(true)`, plus
+  `setUserAuthenticationParameters`/`setUserAuthenticationValidityDurationSeconds(-1)`
+  depending on API level — see the code comment for why two code paths
+  exist). The key is invalidated automatically if the device's biometric
+  enrollment changes. Same disclosed trade-off as desktop's OS-keychain
+  quick unlock: anyone who can unlock the device can then unlock KeyFlow.
+- **Autofill** (`autofill/KeyFlowAutofillService.kt`) runs in-process
+  with the main app, sharing one in-memory vault handle — if the vault is
+  locked, autofill defers to an unlock screen
+  (`autofill/AutofillAuthActivity.kt`) before returning any value, never
+  a cached or pre-decrypted credential. It only ever fills values into
+  the field(s) the Android OS itself identified in the requesting app's
+  view structure — this service does not use an Accessibility Service
+  (broad, blanket access to on-screen content/events in every app),
+  specifically because the OS-mediated Autofill Framework only exposes
+  the one screen's structure for the one fill request, not standing
+  access to everything.
+- **Native-app origin matching is a heuristic**, unlike the
+  cryptographically-exact web-domain matching used everywhere else in
+  KeyFlow — see ROADMAP.md item #17 for the honest limitation.
+- `android:allowBackup="false"` and empty `dataExtractionRules.xml`
+  (both in `AndroidManifest.xml`) exclude the vault and preferences from
+  Android's own backup/device-transfer mechanisms.
+- `FLAG_SECURE` is set on the main window (`MainActivity.onCreate`),
+  blocking screenshots/screen recording of vault contents and redacting
+  the app's entry in the recent-apps switcher to its icon only.
+- No `INTERNET` permission is requested at all.
+- **Not yet verified**: none of the above has been exercised on a real
+  device or emulator (see ROADMAP.md #16) — this section describes what
+  the code does, not what a human has confirmed it does under real
+  Android's actual enforcement of these APIs.
+
 ## Reporting checklist for reviewers
 
 If you're doing your own review, the highest-value places to look are:
@@ -174,4 +217,8 @@ extension — `apps/desktop/src-tauri/src/agent_server.rs` (what the local
 socket will and won't release) and `browser-extension/chrome/src/
 background.ts` (where the page's origin is determined). Everything else
 in `apps/desktop/src-tauri` is IPC plumbing and OS integration around
-that core.
+that core. For Android: `crates/keyflow-mobile/src/lib.rs` (the FFI
+boundary itself), `android/.../biometric/BiometricVaultUnlocker.kt`, and
+`android/.../autofill/KeyFlowAutofillService.kt` +
+`AutofillAuthActivity.kt` (origin resolution and the locked/unlocked
+branch).
