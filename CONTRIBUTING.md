@@ -7,8 +7,8 @@ please read on before opening a PR there.
 ## Getting set up
 
 ```bash
-git clone https://github.com/keyflow/keyflow.git
-cd keyflow/apps/desktop
+git clone https://github.com/L1avZh/KeyFlow.git
+cd KeyFlow/apps/desktop
 npm install
 cargo tauri dev
 ```

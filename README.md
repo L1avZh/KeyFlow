@@ -87,8 +87,8 @@ Homebrew, AppImage/deb/rpm are planned, not done). For now, build from
 source:
 
 ```bash
-git clone https://github.com/keyflow/keyflow.git
-cd keyflow
+git clone https://github.com/L1avZh/KeyFlow.git
+cd KeyFlow
 ```
 
 ### Prerequisites
