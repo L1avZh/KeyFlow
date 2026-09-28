@@ -32,14 +32,21 @@ substitute for testing against the real backend before merging.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md). In short: security-critical logic
 lives in `crates/keyflow-core` (pure Rust, no UI, no networking); the
-Tauri app in `apps/desktop` is IPC plumbing and OS integration around it.
+Tauri app in `apps/desktop` is IPC plumbing and OS integration around it;
+`crates/keyflow-agent` and `crates/keyflow-native-host` plus
+`browser-extension/chrome` are the browser-extension bridge — see
+[browser-extension/README.md](browser-extension/README.md) for its own
+non-negotiables (never send the master password/vault key to the
+extension, always re-validate origin server-side) before touching any
+of those four.
 
 ## Before opening a PR
 
 ```bash
-cargo test --workspace          # keyflow-core's 47+ tests must pass
-cargo clippy --all-targets       # must be warning-free
-cd apps/desktop && npx tsc --noEmit   # frontend must type-check
+cargo test --workspace                    # keyflow-core + keyflow-agent, 51+ tests
+cargo clippy --workspace --all-targets    # must be warning-free
+cd apps/desktop && npx tsc --noEmit       # desktop frontend must type-check
+cd browser-extension/chrome && npx tsc    # extension must compile (this one emits)
 ```
 
 ## Guidelines for changes to `keyflow-core`

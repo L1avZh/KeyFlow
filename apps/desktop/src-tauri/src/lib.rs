@@ -1,3 +1,5 @@
+mod agent_server;
+mod browser_extension;
 mod dto;
 mod quick_unlock;
 mod state;
@@ -333,6 +335,32 @@ fn commit_import(credentials: Vec<CredentialInput>, state: State<AppState>) -> R
     vault.commit_import(creds).map_err(map_err)
 }
 
+#[tauri::command]
+fn register_browser_extension(app: AppHandle) -> Result<Vec<String>, String> {
+    let host_path = browser_extension::resolve_native_host_binary(&app)?;
+    #[cfg(unix)]
+    {
+        browser_extension::register(&host_path)
+    }
+    #[cfg(windows)]
+    {
+        browser_extension::register(&app, &host_path)
+    }
+}
+
+#[tauri::command]
+#[allow(unused_variables)] // `app` is only used in the cfg(windows) branch below
+fn unregister_browser_extension(app: AppHandle) -> Result<(), String> {
+    #[cfg(unix)]
+    {
+        browser_extension::unregister()
+    }
+    #[cfg(windows)]
+    {
+        browser_extension::unregister(&app)
+    }
+}
+
 /// Writes `text` to the system clipboard and, after `seconds`, clears it
 /// again — but only if the clipboard still holds exactly what we put
 /// there, so we never stomp on something the user copied afterward.
@@ -400,6 +428,7 @@ pub fn run() {
             let vault_path = data_dir.join("vault.keyflow");
             app.manage(AppState::new(vault_path));
             register_global_shortcut(&handle);
+            agent_server::spawn(handle.clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -433,6 +462,8 @@ pub fn run() {
             preview_csv_import,
             commit_import,
             copy_with_clipboard_timeout,
+            register_browser_extension,
+            unregister_browser_extension,
         ])
         .run(tauri::generate_context!())
         .expect("error while running keyflow-desktop");

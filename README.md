@@ -35,10 +35,16 @@ successfully on real Windows and Linux GitHub Actions runners via CI
 [v0.1.0 release](https://github.com/L1avZh/KeyFlow/releases/tag/v0.1.0))
 — though only macOS has had a human actually run the built app and
 click through its screens; Windows/Linux are "compiles and packages
-cleanly," not yet "someone confirmed the UI works there." The **browser
-extension is architecture only** — not implemented yet. See [ROADMAP.md](ROADMAP.md)
-for the honest gap list before treating this as a daily-driver
-replacement for your current password manager.
+cleanly," not yet "someone confirmed the UI works there." A **browser
+extension for Chrome/Edge/Chromium now exists** (`browser-extension/chrome`)
+with a real native-messaging bridge to the desktop app — every piece was
+tested individually (protocol, local socket, content-script form
+detection), but loading the actual unpacked extension in a real Chrome
+UI wasn't verified end-to-end, because the development machine's Chrome
+has an enterprise policy disabling unpacked extension loading. Firefox
+and Safari aren't implemented. See [ROADMAP.md](ROADMAP.md) for the
+honest gap list before treating this as a daily-driver replacement for
+your current password manager.
 
 ## Features (this release)
 
@@ -66,6 +72,11 @@ replacement for your current password manager.
   trade-off, see [SECURITY.md](SECURITY.md).
 - Auto-lock on inactivity, manual lock, clipboard auto-clear after
   copying a secret.
+- **Browser extension** (Chrome/Edge/Chromium, unpacked — see
+  [browser-extension/README.md](browser-extension/README.md)) —
+  detects login forms and offers a suggestion UI, talking to the desktop
+  app over a native-messaging bridge that never hands the extension your
+  master password or vault key.
 
 ## Supported platforms
 
@@ -75,7 +86,8 @@ replacement for your current password manager.
 | Windows x64 | Builds and packages successfully via CI on a real Windows runner ([installer download](https://github.com/L1avZh/KeyFlow/releases/tag/v0.1.0)) — not yet manually smoke-tested by a human on Windows |
 | Linux x64 | Builds and packages successfully via CI on a real Ubuntu runner ([AppImage/deb/rpm download](https://github.com/L1avZh/KeyFlow/releases/tag/v0.1.0)) — not yet manually smoke-tested by a human on Linux |
 | Linux ARM64 | Not yet attempted |
-| Browser extension (Chrome/Edge/Firefox/Safari) | Architecture documented ([ARCHITECTURE.md](ARCHITECTURE.md) §4), not implemented |
+| Browser extension: Chrome/Edge/Chromium | Implemented, unpacked-load only — see [browser-extension/README.md](browser-extension/README.md). Verified piece-by-piece, not yet end-to-end in a real browser UI (see ROADMAP.md) |
+| Browser extension: Firefox/Safari | Architecture-compatible, not implemented |
 
 All release binaries are **unsigned** (see the [release notes](https://github.com/L1avZh/KeyFlow/releases/tag/v0.1.0) for what that means when installing).
 
@@ -123,7 +135,9 @@ npm install
 cargo tauri build
 ```
 
-Output lands in `apps/desktop/src-tauri/target/release/bundle/`.
+Output lands in `target/release/bundle/` at the repository root (this is
+a Cargo workspace, so all crates share one `target/` directory — not
+`apps/desktop/src-tauri/target/`).
 
 ### Run the test suite
 
@@ -134,9 +148,11 @@ cargo test --workspace
 ## Repository layout
 
 ```
-crates/keyflow-core/   Vault, crypto, domain matching, password generator — pure Rust, no UI.
-apps/desktop/          Tauri desktop app (Rust backend + vanilla TypeScript frontend).
-browser-extension/     Architecture notes for the not-yet-built browser extension.
+crates/keyflow-core/         Vault, crypto, domain matching, password generator — pure Rust, no UI.
+crates/keyflow-agent/        Shared protocol/paths between the desktop app and the native host.
+crates/keyflow-native-host/  Browser-extension native messaging host.
+apps/desktop/                Tauri desktop app (Rust backend + vanilla TypeScript frontend).
+browser-extension/chrome/    Chrome/Edge/Chromium extension (Manifest V3).
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design and technology
@@ -148,6 +164,10 @@ rationale.
 Tauri IPC layer so the UI can be iterated on in a plain browser tab
 without a native build — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
+For the browser extension, see
+[browser-extension/README.md](browser-extension/README.md) for build and
+local-install steps.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Please read
@@ -156,8 +176,9 @@ GitHub issue.
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for what's next, in priority order — the
-browser extension and packaged installers are the two biggest gaps.
+See [ROADMAP.md](ROADMAP.md) for what's next, in priority order —
+verifying the browser extension end-to-end in a real (policy-unrestricted)
+browser, Firefox/Safari support, and code signing are the biggest gaps.
 
 ## License
 

@@ -49,6 +49,22 @@ export function renderSettings(root: HTMLElement, onLocked: () => void) {
     </div>
 
     <div class="kf-card" style="padding:20px; max-width:600px; margin-bottom:16px">
+      <h2 style="font-size:14px; margin:0 0 4px">Browser extension</h2>
+      <p class="kf-hint" style="margin-bottom:12px">
+        Not published to any extension store yet — this registers KeyFlow's native-messaging bridge so a
+        <strong>manually loaded, unpacked</strong> copy of the extension (from the project's
+        <code>browser-extension/chrome</code> folder) can talk to this app. The extension never receives your
+        master password or vault key — only the one credential you explicitly pick, after it re-checks the
+        page's real origin.
+      </p>
+      <div class="kf-row-gap">
+        <button class="kf-btn kf-btn-primary kf-btn-sm" id="s-ext-register">Enable for installed browsers</button>
+        <button class="kf-btn kf-btn-sm" id="s-ext-unregister">Disable</button>
+      </div>
+      <div id="s-ext-status" class="kf-hint" style="margin-top:10px"></div>
+    </div>
+
+    <div class="kf-card" style="padding:20px; max-width:600px; margin-bottom:16px">
       <h2 style="font-size:14px; margin:0 0 12px">Change master password</h2>
       <div class="kf-field">
         <label for="s-newpw1">New master password</label>
@@ -94,6 +110,20 @@ export function renderSettings(root: HTMLElement, onLocked: () => void) {
   root.querySelector("#s-lock-now")!.addEventListener("click", async () => {
     await api.lockVault();
     onLocked();
+  });
+
+  const extStatus = root.querySelector<HTMLElement>("#s-ext-status")!;
+  root.querySelector("#s-ext-register")!.addEventListener("click", async () => {
+    try {
+      const browsers = await api.registerBrowserExtension();
+      extStatus.textContent = `Enabled for: ${browsers.join(", ")}. Load the unpacked extension from browser-extension/chrome, then restart the browser.`;
+    } catch (err) {
+      extStatus.textContent = friendlyError(err);
+    }
+  });
+  root.querySelector("#s-ext-unregister")!.addEventListener("click", async () => {
+    await api.unregisterBrowserExtension();
+    extStatus.textContent = "Disabled.";
   });
 
   const quickToggle = root.querySelector<HTMLInputElement>("#s-quick-unlock")!;

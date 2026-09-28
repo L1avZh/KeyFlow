@@ -564,16 +564,26 @@ mod tests {
 
     #[test]
     fn tampered_vault_file_fails_to_unlock() {
+        // Corrupt the ciphertext deterministically (decode, flip a bit,
+        // re-encode) rather than searching the raw file bytes for a
+        // specific literal character to flip — that approach had a
+        // real, roughly 1-in-20 chance per run of finding nothing to
+        // flip in the randomly-generated base64 content, silently
+        // leaving the file untouched and making the test flaky.
+        use base64::{engine::general_purpose::STANDARD, Engine as _};
+
         let dir = tempdir().unwrap();
         let path = vault_path(&dir);
         Vault::create(&path, "pw").unwrap();
-        let mut bytes = fs::read(&path).unwrap();
-        // Flip a byte inside what is still valid JSON-safe territory by
-        // corrupting the base64 body ciphertext content directly.
-        if let Some(pos) = bytes.iter().rposition(|&b| b == b'A') {
-            bytes[pos] = b'B';
-        }
-        fs::write(&path, &bytes).unwrap();
+
+        let mut json: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        let ciphertext_b64 = json["body"]["ciphertext"].as_str().unwrap().to_string();
+        let mut ciphertext = STANDARD.decode(&ciphertext_b64).unwrap();
+        let last_index = ciphertext.len() - 1;
+        ciphertext[last_index] ^= 0xFF;
+        json["body"]["ciphertext"] = serde_json::Value::String(STANDARD.encode(ciphertext));
+        fs::write(&path, serde_json::to_vec_pretty(&json).unwrap()).unwrap();
+
         assert!(Vault::unlock(&path, "pw").is_err());
     }
 }

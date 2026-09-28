@@ -21,35 +21,43 @@ grows substantially more complex, revisit this; the DOM-rendering code is
 already isolated per page module specifically so that swap would be
 contained.
 
-**Browser extension**: architecture only in this milestone (see §4) —
-Manifest V3 (Chrome/Edge/Chromium) plus a Manifest V2/V3-compatible
-Firefox build from one shared TypeScript core, communicating with the
-desktop app over OS-native messaging. Not implemented yet; see
-ROADMAP.md.
+**Browser extension**: Manifest V3, implemented for Chrome/Edge/Chromium
+(see §4), communicating with the desktop app over native messaging plus
+a local agent socket. Firefox and Safari are architecture-compatible but
+not built yet; see ROADMAP.md.
 
 ## 2. Crate/module layout
 
 ```
 keyflow/
 ├── crates/
-│   └── keyflow-core/        Pure Rust, no UI, no OS-specific code, no networking.
-│       ├── crypto.rs        Argon2id KDF + AES-256-GCM AEAD + CSPRNG. The only file
-│       │                    that should ever import a cryptography primitive.
-│       ├── vault.rs         On-disk encrypted format, atomic writes, security-dashboard
-│       │                    analyses (weak/reused/old/duplicate), CSV import/export.
-│       ├── credential.rs    The Credential data model. Zeroizes its own secrets on drop.
-│       ├── domain.rs        Origin/eTLD+1 matching — the phishing-resistance logic.
-│       ├── generator.rs     Password/passphrase generation + entropy estimation.
-│       ├── wordlist.rs      Built-in diceware-style wordlist.
-│       └── error.rs         Error types. Never carry secret material in a message.
+│   ├── keyflow-core/        Pure Rust, no UI, no OS-specific code, no networking.
+│   │   ├── crypto.rs        Argon2id KDF + AES-256-GCM AEAD + CSPRNG. The only file
+│   │   │                    that should ever import a cryptography primitive.
+│   │   ├── vault.rs         On-disk encrypted format, atomic writes, security-dashboard
+│   │   │                    analyses (weak/reused/old/duplicate), CSV import/export.
+│   │   ├── credential.rs    The Credential data model. Zeroizes its own secrets on drop.
+│   │   ├── domain.rs        Origin/eTLD+1 matching — the phishing-resistance logic.
+│   │   ├── generator.rs     Password/passphrase generation + entropy estimation.
+│   │   ├── wordlist.rs      Built-in diceware-style wordlist.
+│   │   └── error.rs         Error types. Never carry secret material in a message.
+│   ├── keyflow-agent/       Shared by the desktop app and the native host: the
+│   │   │                    request/response protocol, local-socket path resolution,
+│   │   │                    and native-messaging wire framing. Kept separate so the
+│   │   │                    two sides can't independently drift apart.
+│   └── keyflow-native-host/ The browser-extension's native messaging host — a thin,
+│                            no-vault-access stdio↔socket relay (see §4).
 │
 ├── apps/
 │   └── desktop/
 │       ├── src/              TypeScript UI (Vite, no framework).
 │       └── src-tauri/        Tauri shell: IPC commands, app state, OS integration
-│                              (clipboard, notifications, global shortcut, OS keychain).
+│                              (clipboard, notifications, global shortcut, OS keychain,
+│                              the local agent socket, native-messaging-host registration).
 │
-├── browser-extension/         Architecture + shared TS core (see §4). Not yet built.
+├── browser-extension/
+│   └── chrome/                Manifest V3 extension (Chrome/Edge/Chromium) — see §4.
+│                              Firefox/Safari: architecture documented, not built yet.
 │
 └── docs: this file, THREAT_MODEL.md, SECURITY.md, PRIVACY.md, ROADMAP.md.
 ```
@@ -100,32 +108,50 @@ fully unit-tested against the phishing scenarios in THREAT_MODEL.md, plus
 an in-app "Autofill Tester" (Security → Autofill Tester) that exercises it
 end-to-end without a real browser.
 
-**What real browser-page autofill requires** (not yet built — this is the
-single largest remaining piece of work, tracked in ROADMAP.md):
+**Implemented for Chrome/Edge/Chromium (Manifest V3)** —
+`browser-extension/chrome`, plus two new workspace crates:
 
 ```
-Browser tab (content script)
-   │  detects login form fields (email/username/password/OTP) via
-   │  DOM heuristics: autocomplete attrs, input type, labels, name
-   │  patterns, surrounding text, iframe/frame origin
+Browser tab (content script — browser-extension/chrome/src/content.ts)
+   │  detects login-shaped forms via multiple DOM signals (autocomplete
+   │  attrs, input type, <label> text, name/id patterns, negative
+   │  signals to reject search/OTP/promo fields), grouped by the nearest
+   │  <form> or, failing that, the smallest ancestor also containing
+   │  another candidate field — not <body>, which would wrongly lump
+   │  together every unrelated form on the page. Shows a small
+   │  Shadow-DOM suggestion UI; fills only after the user picks an
+   │  account, using the native <input> value setter + input/change
+   │  events so framework-controlled forms (React, Vue, ...) see it.
    ▼
-Extension background/service worker
-   │  knows the page's origin (from the browser, not from the page's
-   │  own JS — this is what makes phishing resistance possible)
+Extension background service worker (src/background.ts)
+   │  determines the page's real origin from `sender.url` / `sender.origin`
+   │  — fields the browser itself fills in for a message's sender,
+   │  which page JS cannot override — never from anything the content
+   │  script itself claims. Relays exactly two questions to the native
+   │  host: "what matches this origin?" and "give me this one credential
+   │  (re-checked against this origin)".
    ▼
-Native messaging (chrome.runtime.connectNative / Firefox equivalent)
-   │  a single, framed, request/response protocol; the desktop app is
-   │  the only process holding the vault key — see SECURITY.md §"Why
-   │  the extension never gets the master key"
+chrome.runtime.sendNativeMessage → keyflow-native-host (crates/keyflow-native-host)
+   │  a small, separate Rust binary Chrome spawns per request. Speaks
+   │  the standard native-messaging wire format (4-byte length prefix +
+   │  JSON) on stdin/stdout — see keyflow-agent::native_messaging — and
+   │  holds no vault access of its own; it's a thin relay.
    ▼
-KeyFlow desktop app
-   │  runs Origin::parse(page_origin) + evaluate_match(...) using the
-   │  exact same keyflow-core the desktop UI uses — one matching engine,
-   │  not two implementations to keep in sync
+Local agent socket inside the running desktop app (src-tauri/src/agent_server.rs)
+   │  a Unix domain socket (macOS/Linux) / named pipe (Windows) the
+   │  native host connects to, using keyflow-agent's shared path
+   │  resolution so the two sides can't drift apart. Runs
+   │  Origin::parse(...) + the exact same find_autofill_matches(...)
+   │  the desktop UI's Autofill Tester uses — one matching engine, not
+   │  two implementations to keep in sync. Re-validates the origin match
+   │  server-side before ever releasing a password, rather than trusting
+   │  the caller's earlier FindMatches result.
    ▼
-Native messaging response: matched credential(s), or a block reason
+Response: match summaries (no passwords) for the suggestion list, or —
+only after the user clicks one — that one credential's username/password
    ▼
-Content script fills the form (never before this round-trip completes)
+Content script fills the form (never before this round-trip completes,
+never cached across navigations)
 ```
 
 The extension's content/background scripts never receive the master
@@ -133,6 +159,30 @@ password or the derived vault key at any point — only the specific
 credential(s) the desktop app has already decided are safe to offer for
 *this* origin, and only after the user picks one from the suggestion UI
 (no silent autofill).
+
+**What this doesn't cover yet**: Firefox and Safari (different native
+messaging manifest formats and, for Safari, a different transport
+entirely — see `browser-extension/README.md`), auto-launching the
+desktop app if it isn't already running, and publishing to any extension
+store (this ships as a manually-loaded unpacked extension with a pinned
+ID — see `browser-extension/chrome/manifest.json`'s `key` field — so
+`allowed_origins` stays stable across rebuilds). See ROADMAP.md for the
+full list, including a real constraint discovered while testing this:
+some Chrome installations have an enterprise/organization policy that
+disables loading unpacked ("developer mode") extensions entirely, which
+no code change can work around.
+
+### New trust boundary this introduces
+
+The local agent socket authenticates nothing beyond what the OS itself
+guarantees — any process running as the same OS user could connect to it
+directly, bypassing the browser and native host entirely. This is a
+genuine, disclosed addition to the attack surface, not swept under the
+rug: see THREAT_MODEL.md's "local agent socket" entry and
+`agent_server.rs`'s own doc comment for the full reasoning and the two
+mitigations that do apply (secrets only flow while the vault is actually
+unlocked; `GetCredential` re-checks the origin server-side rather than
+trusting the caller).
 
 ## 5. Why not a single "God" IPC command
 

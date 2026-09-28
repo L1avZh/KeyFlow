@@ -54,6 +54,10 @@ export const api = {
 
   copyWithClipboardTimeout: (text: string, seconds: number) =>
     invoke<void>("copy_with_clipboard_timeout", { text, seconds }),
+
+  /** Registers keyflow-native-host with whichever supported browsers are installed; returns their labels. */
+  registerBrowserExtension: () => invoke<string[]>("register_browser_extension"),
+  unregisterBrowserExtension: () => invoke<void>("unregister_browser_extension"),
 };
 
 export function friendlyError(e: unknown): string {

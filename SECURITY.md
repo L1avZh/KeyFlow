@@ -98,12 +98,16 @@ convenience feature should be confused with.
 
 - `cargo test --workspace`: 47 tests in `keyflow-core` covering crypto
   round-trips/tamper-detection, vault lifecycle, domain-matching attack
-  scenarios, and generator entropy guarantees. See CHANGELOG.md / the
-  test files themselves for the full list.
+  scenarios, and generator entropy guarantees, plus 4 tests in
+  `keyflow-agent` covering native-messaging frame parsing (round-trip,
+  clean EOF, oversized length prefix, truncated body). See CHANGELOG.md
+  / the test files themselves for the full list.
 - `cargo clippy --all-targets`: clean, no warnings, at the time of this
   release.
 - `cargo audit` (RustSec advisory database), run against the full
-  549-crate dependency tree: **zero known vulnerabilities**. Two
+  564-crate dependency tree (including the browser-extension native
+  host's dependencies added since v0.1.0's initial cut):
+  **zero known vulnerabilities**. Two
   non-vulnerability warnings, both in transitive dependencies pulled in
   by Tauri's own Linux GTK bindings, not by any KeyFlow code:
   `proc-macro-error` (unmaintained, RUSTSEC-2024-0370) and `glib`
@@ -126,12 +130,48 @@ convenience feature should be confused with.
   in this document should be read as "audited" in that sense — it's a
   disclosure of what the maintainers themselves checked.
 
+## Browser extension: what it can and can't reach
+
+The Chrome/Edge/Chromium extension (`browser-extension/chrome`) never
+receives the master password or the derived vault key — see
+ARCHITECTURE.md §4 for the full request path. Specifics that matter for
+review:
+
+- **The extension ID is pinned**, not left to whatever Chrome assigns an
+  unpacked load. `manifest.json`'s `key` field is a real RSA public key
+  whose SHA-256 hash Chrome uses to compute the extension ID
+  deterministically (`lkljkibkbdbgjmljnhoioceloeiiigmj`), matching the
+  `allowed_origins` entry in the generated native-messaging manifest. A
+  different extension — including a modified copy of KeyFlow's own
+  source without the matching private key — gets a different ID and the
+  browser refuses to launch the native host for it. The private key
+  itself is not needed for anything else and was not retained.
+- **The native host (`keyflow-native-host`) holds no vault access.** It
+  is a stateless stdio↔socket relay; compromising it (or replacing it,
+  if an attacker already has write access to where it's installed —
+  at which point far worse is already possible) gets you a relay to the
+  same local socket described next, nothing more directly.
+- **The local agent socket is a new, disclosed trust boundary**: same-OS-
+  user only, no further authentication. See THREAT_MODEL.md's "local
+  agent socket" entry and `agent_server.rs`'s module doc for the full
+  reasoning, including the two mitigations that do apply (vault must be
+  unlocked; `GetCredential` re-validates the origin server-side).
+- **Not implemented**: Firefox and Safari support (different native-
+  messaging manifest formats/transports), and any Chrome Web Store
+  listing — this ships as a manually-loaded unpacked extension. Also
+  not implemented: auto-launching the desktop app when the extension
+  can't reach it, and locking down the local socket beyond OS-level
+  same-user permissions (see ROADMAP.md).
+
 ## Reporting checklist for reviewers
 
 If you're doing your own review, the highest-value places to look are:
 `crates/keyflow-core/src/crypto.rs` (the only file that should ever
 touch a cryptographic primitive), `crates/keyflow-core/src/domain.rs`
-(the phishing-resistance logic), and `crates/keyflow-core/src/vault.rs`
-(the on-disk format and atomic-write logic). Everything in
-`apps/desktop/src-tauri` is IPC plumbing and OS integration around that
-core.
+(the phishing-resistance logic), `crates/keyflow-core/src/vault.rs`
+(the on-disk format and atomic-write logic), and — new for the browser
+extension — `apps/desktop/src-tauri/src/agent_server.rs` (what the local
+socket will and won't release) and `browser-extension/chrome/src/
+background.ts` (where the page's origin is determined). Everything else
+in `apps/desktop/src-tauri` is IPC plumbing and OS integration around
+that core.

@@ -1,0 +1,7 @@
+{
+  "bundle": {
+    "resources": {
+      "../../../target/release/keyflow-native-host.exe": "keyflow-native-host.exe"
+    }
+  }
+}

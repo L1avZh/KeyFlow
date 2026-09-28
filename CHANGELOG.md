@@ -4,6 +4,45 @@ All notable changes to this project are documented here. Format loosely
 follows [Keep a Changelog](https://keepachangelog.com/); versioning
 follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Browser extension for Chrome/Edge/Chromium (Manifest V3),
+  `browser-extension/chrome` — detects login forms and offers a
+  suggestion UI, backed by a real native-messaging bridge to the desktop
+  app. See [browser-extension/README.md](browser-extension/README.md).
+- `keyflow-agent` crate: the shared request/response protocol, local
+  agent-socket path resolution, and native-messaging wire framing used
+  by both the desktop app and the new native host. 4 unit tests.
+- `keyflow-native-host` crate: the native messaging host binary itself —
+  a stateless stdio↔socket relay with no vault access of its own.
+- Local agent socket in the desktop app (`agent_server.rs`): answers
+  "what matches this origin?" and "give me this credential" using the
+  same `keyflow_core` calls the desktop UI's Autofill Tester uses,
+  re-validating the origin server-side before ever releasing a password.
+- Settings → Browser extension: registers/unregisters the native
+  messaging host manifest for installed Chromium-based browsers.
+- The native host binary is now bundled into packaged builds on all
+  three OSes (`tauri.{macos,linux,windows}.conf.json`).
+
+### Fixed
+
+- `crates/keyflow-core/src/vault.rs`: `tampered_vault_file_fails_to_unlock`
+  was flaky (~1-in-20 runs) — it searched for a literal `'A'` byte to
+  corrupt, which the randomly-generated base64 content sometimes didn't
+  contain at all, silently leaving the file untouched. Now corrupts the
+  ciphertext deterministically instead.
+
+### Known limitations (new this round)
+
+Firefox and Safari support isn't implemented. The unpacked Chrome
+extension was verified piece-by-piece (native messaging protocol, agent
+socket, content-script detection/fill logic all tested independently)
+but not end-to-end through a real Chrome UI — the development machine's
+Chrome installation has an enterprise policy disabling unpacked
+("developer mode") extension loading entirely. See ROADMAP.md.
+
 ## [0.1.0] — 2026-09-28
 
 Released with unsigned installers for macOS, Windows x64, and Linux x64

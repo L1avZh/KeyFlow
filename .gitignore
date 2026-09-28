@@ -6,6 +6,7 @@ Cargo.lock.bak
 node_modules/
 apps/desktop/dist/
 apps/desktop/dist-ssr/
+browser-extension/chrome/dist/
 npm-debug.log*
 
 # Tauri

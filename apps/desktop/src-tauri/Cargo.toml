@@ -19,6 +19,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 keyflow-core = { path = "../../../crates/keyflow-core" }
+keyflow-agent = { path = "../../../crates/keyflow-agent" }
 tauri = { version = "2", features = [] }
 tauri-plugin-clipboard-manager = "2"
 tauri-plugin-notification = "2"
@@ -31,7 +32,11 @@ thiserror = "1"
 keyring = "3"
 zeroize = "1.8"
 time = { version = "0.3", features = ["formatting"] }
-tokio = { version = "1", features = ["time", "rt"] }
+tokio = { version = "1", features = ["time", "rt", "net", "io-util"] }
+dirs = "5"
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.52"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

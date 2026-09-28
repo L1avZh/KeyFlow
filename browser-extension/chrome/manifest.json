@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "KeyFlow",
+  "version": "0.1.0",
+  "description": "Securely suggests your saved KeyFlow logins on the page you're actually on.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAppxADWaxAK7Zj5qZW70DZW3KU4bXgPSLuxuAQKddQn7NsMJrrW4JWbsgksC7JuFCY66KPPek+h9lhm3XXNIv3BMWalwGGtuWK3oAAEg9Gr8UN/yfO38SDruaEzcQSRbobrzuKA4SmUP741FCJyPilpNOBef0oXn3vwioDC42wyDume5q4EEm20P63jvq0dWksSj3nZGNvsByzLZbiDOSOGaUFKh1HuNUsneZxMB6WhSvfNGvbcSqDDjOO2odiFNnjk/N8frgjm/pJEPdsuTTRo1elYRYsXlFJPxSuW2Iok+lLLsl/TmBANzfpcaDsQaKEhIRvnmnFyEn4YUt6z6MkwIDAQAB",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    }
+  },
+  "background": {
+    "service_worker": "dist/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["dist/content.js"],
+      "all_frames": true,
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": ["nativeMessaging"],
+  "minimum_chrome_version": "116"
+}
