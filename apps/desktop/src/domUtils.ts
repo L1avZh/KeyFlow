@@ -24,3 +24,21 @@ export function guardBusy<T extends HTMLButtonElement, E extends Event>(button: 
     }
   };
 }
+
+/**
+ * Counts Unicode codepoints the way Rust's `.chars().count()` does —
+ * unlike JS's native `string.length`, which counts UTF-16 code units.
+ * They diverge for any character outside the Basic Multilingual Plane
+ * (most emoji): a 5-emoji password shows `.length === 10` (each emoji is
+ * a 2-unit surrogate pair) while Rust sees 5 characters. The backend's
+ * master-password minimum is enforced with `.chars().count()` (see
+ * `keyflow-core::vault::validate_master_password`); using plain
+ * `.length` here let a password pass this UI's own check and then get
+ * rejected by the backend with a confusing "must be at least 10
+ * characters" error for something that looked plenty long — confirmed
+ * by directly comparing `"🎉🎉🎉🎉🎉".length` (10) against Rust's
+ * `.chars().count()` (5) for the same string, not assumed.
+ */
+export function codepointLength(s: string): number {
+  return [...s].length;
+}

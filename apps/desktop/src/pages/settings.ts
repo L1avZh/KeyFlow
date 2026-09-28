@@ -1,5 +1,5 @@
 import { api, friendlyError } from "../api";
-import { guardBusy } from "../domUtils";
+import { codepointLength, guardBusy } from "../domUtils";
 import { setAutoLockMinutes, setClipboardClearSeconds, setCredentials, setTheme, state } from "../state";
 import { toast } from "../toast";
 
@@ -170,7 +170,7 @@ export function renderSettings(root: HTMLElement, onLocked: () => void) {
       const p2 = root.querySelector<HTMLInputElement>("#s-newpw2")!;
       const errorEl = root.querySelector<HTMLElement>("#s-pw-error")!;
       errorEl.textContent = "";
-      if (p1.value.length < 10) {
+      if (codepointLength(p1.value) < 10) {
         errorEl.textContent = "Use at least 10 characters.";
         return;
       }

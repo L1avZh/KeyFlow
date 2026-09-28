@@ -1,4 +1,5 @@
 import { api, friendlyError } from "../api";
+import { codepointLength } from "../domUtils";
 import { toast } from "../toast";
 
 const MIN_LENGTH = 10;
@@ -75,7 +76,7 @@ export function renderOnboarding(root: HTMLElement, onDone: () => void) {
       errorEl.textContent = "Those passwords don't match.";
       return;
     }
-    if (pw1.value.length < MIN_LENGTH) {
+    if (codepointLength(pw1.value) < MIN_LENGTH) {
       errorEl.textContent = `Use at least ${MIN_LENGTH} characters.`;
       return;
     }
