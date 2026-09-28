@@ -22,7 +22,7 @@ forgotten.
   accessibility (keyboard nav, focus states, `prefers-reduced-motion`
   respected, no color-only status indicators).
 - **(Added 2026-09-28) Browser extension for Chrome/Edge/Chromium (MV3)**
-  — `browser-extension/chrome`, plus two new crates: `keyflow-agent`
+  — `apps/browser-extension/chrome`, plus two new crates: `keyflow-agent`
   (shared protocol/path resolution/native-messaging framing, 4 unit
   tests) and `keyflow-native-host` (the stdio↔socket relay). A local
   agent socket in the desktop app (`agent_server.rs`) answers matching
@@ -46,7 +46,7 @@ forgotten.
 
 1. **Browser extension: what's still missing.** Firefox and Safari
    support (different native-messaging manifest formats, and for Safari
-   a different transport entirely — see `browser-extension/README.md`).
+   a different transport entirely — see `apps/browser-extension/README.md`).
    Auto-launching the desktop app when the extension can't reach it
    (today it just shows "open KeyFlow"). Publishing anywhere (Chrome Web
    Store, AMO) — this is a manually-loaded unpacked extension only.
@@ -141,14 +141,14 @@ forgotten.
     runners for lint+test; full cross-platform *build* verification and
     release artifact generation is future work tied to items #2–#4).
 16. **Android: real-device/emulator verification.** Updated 2026-09-28:
-    the Android app (`android/`) is implemented — Compose UI for
+    the Android app (`apps/android/`) is implemented — Compose UI for
     onboarding/vault/generator/security dashboard/settings, biometric
     quick-unlock via Android Keystore, and a real Autofill Framework
     service, all calling into `keyflow-core` directly through a new
     UniFFI bridge crate (`crates/keyflow-mobile`) rather than
     reimplementing crypto. It builds (debug + release AAB/APK, R8
     verified), lints clean, and 11 unit tests pass against the real
-    host-compiled Rust engine (see `android/README.md`) — all in CI on
+    host-compiled Rust engine (see `apps/android/README.md`) — all in CI on
     every push. What's genuinely unverified: nobody has run the app on a
     real device or emulator, since none was available in the environment
     it was built in. That means: no confirmation the Autofill service

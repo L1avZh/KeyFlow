@@ -51,20 +51,18 @@ keyflow/
 │                            standalone Cargo workspace (see its Cargo.toml for why) —
 │                            not a root-workspace member. See §7.
 │
-├── apps/
-│   └── desktop/
-│       ├── src/              TypeScript UI (Vite, no framework).
-│       └── src-tauri/        Tauri shell: IPC commands, app state, OS integration
-│                              (clipboard, notifications, global shortcut, OS keychain,
-│                              the local agent socket, native-messaging-host registration).
-│
-├── android/                   Android app (Kotlin, Jetpack Compose) — see §7.
-│
-├── browser-extension/
-│   └── chrome/                Manifest V3 extension (Chrome/Edge/Chromium) — see §4.
+├── apps/                     Every client platform lives here, as a sibling of desktop —
+│   ├── desktop/
+│   │   ├── src/              TypeScript UI (Vite, no framework).
+│   │   └── src-tauri/        Tauri shell: IPC commands, app state, OS integration
+│   │                          (clipboard, notifications, global shortcut, OS keychain,
+│   │                          the local agent socket, native-messaging-host registration).
+│   ├── android/               Android app (Kotlin, Jetpack Compose) — see §7.
+│   └── browser-extension/
+│       └── chrome/            Manifest V3 extension (Chrome/Edge/Chromium) — see §4.
 │                              Firefox/Safari: architecture documented, not built yet.
 │
-└── docs: this file, THREAT_MODEL.md, SECURITY.md, PRIVACY.md, ROADMAP.md.
+└── docs: this file, THREAT_MODEL.md, SECURITY.md, PRIVACY.md, ROADMAP.md, docs/.
 ```
 
 `keyflow-core` has `unsafe_code = "forbid"` set at the lint level and zero
@@ -114,10 +112,10 @@ an in-app "Autofill Tester" (Security → Autofill Tester) that exercises it
 end-to-end without a real browser.
 
 **Implemented for Chrome/Edge/Chromium (Manifest V3)** —
-`browser-extension/chrome`, plus two new workspace crates:
+`apps/browser-extension/chrome`, plus two new workspace crates:
 
 ```
-Browser tab (content script — browser-extension/chrome/src/content.ts)
+Browser tab (content script — apps/browser-extension/chrome/src/content.ts)
    │  detects login-shaped forms via multiple DOM signals (autocomplete
    │  attrs, input type, <label> text, name/id patterns, negative
    │  signals to reject search/OTP/promo fields), grouped by the nearest
@@ -167,10 +165,10 @@ credential(s) the desktop app has already decided are safe to offer for
 
 **What this doesn't cover yet**: Firefox and Safari (different native
 messaging manifest formats and, for Safari, a different transport
-entirely — see `browser-extension/README.md`), auto-launching the
+entirely — see `apps/browser-extension/README.md`), auto-launching the
 desktop app if it isn't already running, and publishing to any extension
 store (this ships as a manually-loaded unpacked extension with a pinned
-ID — see `browser-extension/chrome/manifest.json`'s `key` field — so
+ID — see `apps/browser-extension/chrome/manifest.json`'s `key` field — so
 `allowed_origins` stays stable across rebuilds). See ROADMAP.md for the
 full list, including a real constraint discovered while testing this:
 some Chrome installations have an enterprise/organization policy that
@@ -257,5 +255,5 @@ equivalent to reuse — see SECURITY.md's Android section and ROADMAP.md
 items #16–#18 for what it does, its native-app-matching heuristic
 limitation, and what remains unverified without a real device.
 
-See `android/README.md` for build instructions and exactly which parts
+See `apps/android/README.md` for build instructions and exactly which parts
 of the Android app have and haven't been tested.

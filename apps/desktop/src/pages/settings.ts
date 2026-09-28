@@ -54,7 +54,7 @@ export function renderSettings(root: HTMLElement, onLocked: () => void) {
       <p class="kf-hint" style="margin-bottom:12px">
         Not published to any extension store yet — this registers KeyFlow's native-messaging bridge so a
         <strong>manually loaded, unpacked</strong> copy of the extension (from the project's
-        <code>browser-extension/chrome</code> folder) can talk to this app. The extension never receives your
+        <code>apps/browser-extension/chrome</code> folder) can talk to this app. The extension never receives your
         master password or vault key — only the one credential you explicitly pick, after it re-checks the
         page's real origin.
       </p>
@@ -120,7 +120,7 @@ export function renderSettings(root: HTMLElement, onLocked: () => void) {
     guardBusy(extRegisterBtn, async () => {
       try {
         const browsers = await api.registerBrowserExtension();
-        extStatus.textContent = `Enabled for: ${browsers.join(", ")}. Load the unpacked extension from browser-extension/chrome, then restart the browser.`;
+        extStatus.textContent = `Enabled for: ${browsers.join(", ")}. Load the unpacked extension from apps/browser-extension/chrome, then restart the browser.`;
       } catch (err) {
         extStatus.textContent = friendlyError(err);
       }

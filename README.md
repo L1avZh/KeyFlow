@@ -11,7 +11,7 @@
 <p align="center"><sub>
   Frames 1–7 (desktop app): the app's real frontend code, run with sample data via its
   <a href="apps/desktop/dev-preview.html">dev preview harness</a> (see <a href="CONTRIBUTING.md">CONTRIBUTING.md</a>) — not a recording of the compiled native window, since this sandbox has no display to record from.<br/>
-  Frames 8–10 (browser extension): the real compiled <a href="browser-extension/chrome">extension code</a> running against a sample login page, with its native-messaging responses mocked the same way — not loaded as an installed Chrome extension, since a Chrome enterprise policy on the build machine blocks unpacked extension loading (see <a href="ROADMAP.md">ROADMAP.md</a>).<br/>
+  Frames 8–10 (browser extension): the real compiled <a href="apps/browser-extension/chrome">extension code</a> running against a sample login page, with its native-messaging responses mocked the same way — not loaded as an installed Chrome extension, since a Chrome enterprise policy on the build machine blocks unpacked extension loading (see <a href="ROADMAP.md">ROADMAP.md</a>).<br/>
   Frame 11: a real screenshot of the <a href="https://github.com/L1avZh/KeyFlow/releases/tag/v0.1.0">published v0.1.0 release page</a> — the actual evidence for the Windows and Linux builds, since this sandbox can't run or screen-record Windows itself.
 </sub></p>
 
@@ -41,17 +41,17 @@ successfully on real Windows and Linux GitHub Actions runners via CI
 — though only macOS has had a human actually run the built app and
 click through its screens; Windows/Linux are "compiles and packages
 cleanly," not yet "someone confirmed the UI works there." A **browser
-extension for Chrome/Edge/Chromium now exists** (`browser-extension/chrome`)
+extension for Chrome/Edge/Chromium now exists** (`apps/browser-extension/chrome`)
 with a real native-messaging bridge to the desktop app — every piece was
 tested individually (protocol, local socket, content-script form
 detection), but loading the actual unpacked extension in a real Chrome
 UI wasn't verified end-to-end, because the development machine's Chrome
 has an enterprise policy disabling unpacked extension loading. Firefox
-and Safari aren't implemented. An **Android app** (`android/`) now also
+and Safari aren't implemented. An **Android app** (`apps/android/`) now also
 exists, reusing `keyflow-core` directly via a UniFFI bridge
 (`crates/keyflow-mobile`) rather than reimplementing crypto/vault logic —
 it builds, lints, and passes unit tests (which genuinely exercise the
-real Rust engine, not a mock — see [android/README.md](android/README.md))
+real Rust engine, not a mock — see [apps/android/README.md](apps/android/README.md))
 in CI on every push, but has not been run on a real device or emulator,
 since none was available in the environment it was built in. See
 [ROADMAP.md](ROADMAP.md) for the honest gap list before treating this as
@@ -84,7 +84,7 @@ a daily-driver replacement for your current password manager.
 - Auto-lock on inactivity, manual lock, clipboard auto-clear after
   copying a secret.
 - **Browser extension** (Chrome/Edge/Chromium, unpacked — see
-  [browser-extension/README.md](browser-extension/README.md)) —
+  [apps/browser-extension/README.md](apps/browser-extension/README.md)) —
   detects login forms and offers a suggestion UI, talking to the desktop
   app over a native-messaging bridge that never hands the extension your
   master password or vault key.
@@ -97,9 +97,9 @@ a daily-driver replacement for your current password manager.
 | Windows x64 | Builds and packages successfully via CI on a real Windows runner ([installer download](https://github.com/L1avZh/KeyFlow/releases/tag/v0.1.0)) — not yet manually smoke-tested by a human on Windows |
 | Linux x64 | Builds and packages successfully via CI on a real Ubuntu runner ([AppImage/deb/rpm download](https://github.com/L1avZh/KeyFlow/releases/tag/v0.1.0)) — not yet manually smoke-tested by a human on Linux |
 | Linux ARM64 | Not yet attempted |
-| Browser extension: Chrome/Edge/Chromium | Implemented, unpacked-load only — see [browser-extension/README.md](browser-extension/README.md). Verified piece-by-piece, not yet end-to-end in a real browser UI (see ROADMAP.md) |
+| Browser extension: Chrome/Edge/Chromium | Implemented, unpacked-load only — see [apps/browser-extension/README.md](apps/browser-extension/README.md). Verified piece-by-piece, not yet end-to-end in a real browser UI (see ROADMAP.md) |
 | Browser extension: Firefox/Safari | Architecture-compatible, not implemented |
-| Android | Builds, lints, and passes unit tests in CI (see [android/README.md](android/README.md)); Autofill service and biometric unlock are implemented but not yet run on a real device/emulator |
+| Android | Builds, lints, and passes unit tests in CI (see [apps/android/README.md](apps/android/README.md)); Autofill service and biometric unlock are implemented but not yet run on a real device/emulator |
 
 All release binaries are **unsigned** (see the [release notes](https://github.com/L1avZh/KeyFlow/releases/tag/v0.1.0) for what that means when installing).
 
@@ -159,7 +159,7 @@ cargo test --workspace
 
 ### Build the Android app
 
-See [android/README.md](android/README.md) for prerequisites (Android
+See [apps/android/README.md](apps/android/README.md) for prerequisites (Android
 SDK/NDK, Rust Android targets, cargo-ndk) and full instructions. Short
 version:
 
@@ -171,13 +171,13 @@ cd android
 ## Repository layout
 
 ```
-crates/keyflow-core/         Vault, crypto, domain matching, password generator — pure Rust, no UI.
-crates/keyflow-mobile/       UniFFI bridge exposing keyflow-core to the Android app. Own Cargo workspace — see its Cargo.toml.
-crates/keyflow-agent/        Shared protocol/paths between the desktop app and the native host.
-crates/keyflow-native-host/  Browser-extension native messaging host.
-apps/desktop/                Tauri desktop app (Rust backend + vanilla TypeScript frontend).
-android/                     Android app (Kotlin, Jetpack Compose).
-browser-extension/chrome/    Chrome/Edge/Chromium extension (Manifest V3).
+crates/keyflow-core/              Vault, crypto, domain matching, password generator — pure Rust, no UI.
+crates/keyflow-mobile/             UniFFI bridge exposing keyflow-core to the Android app. Own Cargo workspace — see its Cargo.toml.
+crates/keyflow-agent/              Shared protocol/paths between the desktop app and the native host.
+crates/keyflow-native-host/        Browser-extension native messaging host.
+apps/desktop/                      Tauri desktop app (Rust backend + vanilla TypeScript frontend).
+apps/android/                      Android app (Kotlin, Jetpack Compose).
+apps/browser-extension/chrome/     Chrome/Edge/Chromium extension (Manifest V3).
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design and technology
@@ -190,7 +190,7 @@ Tauri IPC layer so the UI can be iterated on in a plain browser tab
 without a native build — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 For the browser extension, see
-[browser-extension/README.md](browser-extension/README.md) for build and
+[apps/browser-extension/README.md](apps/browser-extension/README.md) for build and
 local-install steps.
 
 ## Contributing

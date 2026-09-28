@@ -132,7 +132,7 @@ convenience feature should be confused with.
 
 ## Browser extension: what it can and can't reach
 
-The Chrome/Edge/Chromium extension (`browser-extension/chrome`) never
+The Chrome/Edge/Chromium extension (`apps/browser-extension/chrome`) never
 receives the master password or the derived vault key — see
 ARCHITECTURE.md §4 for the full request path. Specifics that matter for
 review:
@@ -165,7 +165,7 @@ review:
 
 ## Android: security boundaries
 
-The Android app (`android/`) reuses `keyflow-core` directly through a
+The Android app (`apps/android/`) reuses `keyflow-core` directly through a
 thin UniFFI bridge crate (`crates/keyflow-mobile`) — the same Argon2id
 KDF, AES-256-GCM AEAD, and vault-file format as desktop, called via JNA
 from Kotlin, not reimplemented. `crates/keyflow-mobile` itself contains
@@ -214,11 +214,11 @@ touch a cryptographic primitive), `crates/keyflow-core/src/domain.rs`
 (the phishing-resistance logic), `crates/keyflow-core/src/vault.rs`
 (the on-disk format and atomic-write logic), and — new for the browser
 extension — `apps/desktop/src-tauri/src/agent_server.rs` (what the local
-socket will and won't release) and `browser-extension/chrome/src/
+socket will and won't release) and `apps/browser-extension/chrome/src/
 background.ts` (where the page's origin is determined). Everything else
 in `apps/desktop/src-tauri` is IPC plumbing and OS integration around
 that core. For Android: `crates/keyflow-mobile/src/lib.rs` (the FFI
-boundary itself), `android/.../biometric/BiometricVaultUnlocker.kt`, and
-`android/.../autofill/KeyFlowAutofillService.kt` +
+boundary itself), `apps/android/.../biometric/BiometricVaultUnlocker.kt`, and
+`apps/android/.../autofill/KeyFlowAutofillService.kt` +
 `AutofillAuthActivity.kt` (origin resolution and the locked/unlocked
 branch).

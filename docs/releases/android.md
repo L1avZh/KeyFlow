@@ -12,7 +12,7 @@ cross-compiles the Rust bridge for all 4 Android ABIs, generates the
 Kotlin bindings, runs lint and unit tests, and builds both a release AAB
 and APK. Without any secrets configured, that release build is signed
 with the Android debug keystore automatically (see
-`android/app/build.gradle.kts`) — real, so it proves the release build
+`apps/android/app/build.gradle.kts`) — real, so it proves the release build
 genuinely works, but **not suitable to publish**.
 
 ## Configuring real release signing (GitHub Actions)
@@ -41,7 +41,7 @@ genuinely works, but **not suitable to publish**.
 
 **Never** commit `release.keystore`, `signing.properties`, or any of the
 above values into the repository. `.gitignore` already excludes
-`android/signing.properties`, `android/*.keystore`, and `android/*.jks`.
+`apps/android/signing.properties`, `apps/android/*.keystore`, and `apps/android/*.jks`.
 
 ## GitHub Releases
 

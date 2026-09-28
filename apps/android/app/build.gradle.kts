@@ -17,7 +17,7 @@ plugins {
 // ANDROID_NDK_HOME (or an NDK under $ANDROID_HOME/ndk/<version>) — see
 // android/README.md.
 // ---------------------------------------------------------------------
-val keyflowMobileDir = rootProject.file("../crates/keyflow-mobile")
+val keyflowMobileDir = rootProject.file("../../crates/keyflow-mobile")
 val uniffiGeneratedDir = layout.buildDirectory.dir("generated/uniffi/java")
 val rustJniLibsDir = layout.buildDirectory.dir("rustJniLibs")
 
@@ -32,8 +32,8 @@ val cargoNdkBuild = tasks.register<Exec>("cargoNdkBuild") {
     )
     inputs.dir(keyflowMobileDir.resolve("src"))
     inputs.file(keyflowMobileDir.resolve("Cargo.toml"))
-    inputs.dir(rootProject.file("../crates/keyflow-core/src"))
-    inputs.file(rootProject.file("../crates/keyflow-core/Cargo.toml"))
+    inputs.dir(rootProject.file("../../crates/keyflow-core/src"))
+    inputs.file(rootProject.file("../../crates/keyflow-core/Cargo.toml"))
     outputs.dir(rustJniLibsDir)
 }
 

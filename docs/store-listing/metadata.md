@@ -60,7 +60,7 @@ project's own site) before submitting, and put that URL here.
 
 ## Screenshots / feature graphic
 Not generated as part of this work — they require a running app on a
-device/emulator to capture real screens (see `android/README.md`'s
+device/emulator to capture real screens (see `apps/android/README.md`'s
 Testing section for why no emulator was available in this environment).
 Capture these once you have a device: Play requires at minimum 2 phone
 screenshots (Onboarding, Vault list, Security dashboard, and Generator

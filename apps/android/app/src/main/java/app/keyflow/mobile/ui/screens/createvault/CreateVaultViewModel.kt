@@ -34,7 +34,7 @@ class CreateVaultViewModel(private val repository: VaultRepository) : ViewModel(
         // core reports (min_master_password_length()) rather than a
         // separately hardcoded number — the desktop app once shipped
         // with exactly that kind of drift between a UI check and the
-        // backend's real check (see repo QA_REPORT.md, BUG-011).
+        // backend's real check (see docs/qa-report-2026-09-28.md, BUG-011).
         // codePointCount (not .length) matches Kotlin's own Unicode
         // scalar-value counting, the same class of fix.
         if (state.password.codePointCount(0, state.password.length) < state.minLength) {

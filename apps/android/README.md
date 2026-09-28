@@ -28,7 +28,7 @@ crates/keyflow-core     — unchanged; exactly the same crate the desktop
 Kotlin is dispatched onto `Dispatchers.IO` in `VaultRepository`, never
 the UI thread.
 
-See [`ARCHITECTURE.md`](../ARCHITECTURE.md) at the repo root for the
+See [`ARCHITECTURE.md`](../../ARCHITECTURE.md) at the repo root for the
 full-project architecture, and `crates/keyflow-mobile/src/lib.rs`'s doc
 comments for exactly which functions/types cross the FFI boundary and why.
 
@@ -43,7 +43,7 @@ comments for exactly which functions/types cross the FFI boundary and why.
   before running `./gradlew`.
 - **Android SDK** — `compileSdk`/`targetSdk` 35, `build-tools;35.0.0`,
   `platform-tools`. Point `ANDROID_HOME` at it, or create
-  `android/local.properties` with `sdk.dir=/path/to/sdk` (gitignored).
+  `apps/android/local.properties` with `sdk.dir=/path/to/sdk` (gitignored).
 - **Android NDK** `27.2.12479018` (or update the version in
   `app/build.gradle.kts`'s `cargoNdkBuild` task and this file together).
 - **Rust Android targets**:
@@ -57,7 +57,7 @@ the pinned version (8.10.2) itself on first run.
 
 ## Building
 
-All commands run from the `android/` directory.
+All commands run from the `apps/android/` directory.
 
 ```bash
 ./gradlew :app:assembleDebug      # debug APK, unsigned-for-development
@@ -70,7 +70,7 @@ All commands run from the `android/` directory.
 The Rust cross-compilation (`cargoNdkBuild`) and Kotlin-bindings
 generation (`generateUniffiBindings`) run automatically as part of
 Gradle's `preBuild` — nothing is checked into git for either (see the
-top of `app/build.gradle.kts` for why, and `.gitignore`'s `android/`
+top of `app/build.gradle.kts` for why, and `.gitignore`'s `apps/android/`
 section). First build will take longer while Rust compiles; subsequent
 builds are incremental.
 
@@ -108,7 +108,7 @@ untested.
 ## Project layout
 
 ```
-android/
+apps/android/
 ├── app/
 │   ├── src/main/java/app/keyflow/mobile/
 │   │   ├── data/           VaultRepository, AppPreferences (DataStore)
@@ -125,7 +125,7 @@ android/
 ## Signing a real release
 
 Never commit a keystore. For local release testing, create
-`android/signing.properties` (gitignored):
+`apps/android/signing.properties` (gitignored):
 
 ```properties
 KEYFLOW_RELEASE_KEYSTORE=/absolute/or/relative/path/to/your.keystore
@@ -135,11 +135,11 @@ KEYFLOW_RELEASE_KEY_PASSWORD=...
 ```
 
 For CI/GitHub Releases, see
-[`docs/releases/android.md`](../docs/releases/android.md) for the GitHub
+[`docs/releases/android.md`](../../docs/releases/android.md) for the GitHub
 Actions secrets `.github/workflows/android.yml` expects, and for what
 Google Play Console setup genuinely requires a human with account access
 (this repository cannot and does not fake a Play Store submission).
 
 ## Known limitations
 
-See the Android section of [`ROADMAP.md`](../ROADMAP.md).
+See the Android section of [`ROADMAP.md`](../../ROADMAP.md).
