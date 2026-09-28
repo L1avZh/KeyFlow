@@ -71,11 +71,11 @@ jobs:
   # Full desktop app build, including the native webview shell. This
   # pulls in platform GUI toolchains (WebView2 on Windows, webkitgtk on
   # Linux), so it's kept out of the fast per-PR path and only runs on
-  # demand or when tagging a release. NOTE: as of this repository's
-  # initial commit, this job has been written by hand following Tauri's
-  # documented CI recipe but has not actually been executed — see
-  # ROADMAP.md item #2. Treat its first few runs as verification, not
-  # an assumed-working pipeline.
+  # demand or when tagging a release. Verified working end-to-end for
+  # v0.1.0 (all three OSes built and packaged successfully, release
+  # created) — see ROADMAP.md item #2 for what's still unverified
+  # (nobody has manually run the Windows/Linux binaries yet, only
+  # confirmed they build and package cleanly).
   desktop-build:
     name: Desktop build (${{ matrix.os }})
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')

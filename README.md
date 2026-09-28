@@ -29,10 +29,14 @@ the vault engine is a dependency-light Rust core with no networking and
 This is an early, honest **v0.1**. The desktop app — vault, encryption,
 password generator, security dashboard, and the phishing-resistant
 domain-matching engine — is real, working, and unit-tested today, and
-runs on macOS (this milestone was built and tested there; Windows/Linux
-builds use the same code and should work but have not yet been built or
-tested on those OSes in this repo). The **browser extension is
-architecture only** — not implemented yet. See [ROADMAP.md](ROADMAP.md)
+was manually clicked through on macOS, and now also builds and packages
+successfully on real Windows and Linux GitHub Actions runners via CI
+(installers for all three are on the
+[v0.1.0 release](https://github.com/L1avZh/KeyFlow/releases/tag/v0.1.0))
+— though only macOS has had a human actually run the built app and
+click through its screens; Windows/Linux are "compiles and packages
+cleanly," not yet "someone confirmed the UI works there." The **browser
+extension is architecture only** — not implemented yet. See [ROADMAP.md](ROADMAP.md)
 for the honest gap list before treating this as a daily-driver
 replacement for your current password manager.
 
@@ -67,10 +71,13 @@ replacement for your current password manager.
 
 | Platform | Status |
 |---|---|
-| macOS (Apple Silicon & Intel) | Built and tested this release |
-| Windows x64 | Same codebase, not yet built/tested in this repo |
-| Linux x64 / ARM64 | Same codebase, not yet built/tested in this repo |
+| macOS (Apple Silicon) | Built, run, and manually clicked through this release |
+| Windows x64 | Builds and packages successfully via CI on a real Windows runner ([installer download](https://github.com/L1avZh/KeyFlow/releases/tag/v0.1.0)) — not yet manually smoke-tested by a human on Windows |
+| Linux x64 | Builds and packages successfully via CI on a real Ubuntu runner ([AppImage/deb/rpm download](https://github.com/L1avZh/KeyFlow/releases/tag/v0.1.0)) — not yet manually smoke-tested by a human on Linux |
+| Linux ARM64 | Not yet attempted |
 | Browser extension (Chrome/Edge/Firefox/Safari) | Architecture documented ([ARCHITECTURE.md](ARCHITECTURE.md) §4), not implemented |
+
+All release binaries are **unsigned** (see the [release notes](https://github.com/L1avZh/KeyFlow/releases/tag/v0.1.0) for what that means when installing).
 
 ## Security & privacy at a glance
 

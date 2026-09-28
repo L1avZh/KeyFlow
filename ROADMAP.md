@@ -29,19 +29,28 @@ forgotten.
    Without this, KeyFlow cannot actually autofill a real web page — the
    in-app "Autofill Tester" exercises the matching engine but is not a
    substitute.
-2. **Windows and Linux builds.** The Rust/TypeScript code is
-   platform-agnostic and Tauri targets all three OSes, but this session
-   only had macOS available to build and run on. Before claiming
-   cross-platform support in practice: build on Windows and Linux CI
-   runners, smoke-test onboarding → vault → generator → lock/unlock on
-   each, and fix whatever platform-specific issues surface (there will
-   be some — e.g. `keyring`'s Linux Secret Service backend needs a
-   running D-Bus session and may behave differently across desktop
-   environments).
-3. **Packaging & distribution.** No installers exist yet: no signed/
-   notarized macOS `.dmg`, no Windows `.msi`/portable build, no
-   AppImage/`.deb`/`.rpm`, no Homebrew formula. `cargo tauri build`
-   produces an unsigned local bundle only.
+2. **Windows and Linux manual smoke-testing.** Updated 2026-09-28: CI
+   (`.github/workflows/ci.yml`, `desktop-build` job) now builds and
+   packages KeyFlow successfully on real `windows-latest` and
+   `ubuntu-latest` GitHub-hosted runners — see the
+   [v0.1.0 release](https://github.com/L1avZh/KeyFlow/releases/tag/v0.1.0)
+   for the actual `.exe`/`.msi`/`.AppImage`/`.deb`/`.rpm` artifacts that
+   build produced. What's still missing: nobody has actually *run* those
+   binaries and clicked through onboarding → vault → generator →
+   lock/unlock on real Windows/Linux machines yet, so platform-specific
+   runtime issues (e.g. `keyring`'s Linux Secret Service backend needing
+   a running D-Bus session, behavior differences across desktop
+   environments, Windows WebView2 runtime availability on a clean
+   machine) remain unverified. "Builds cleanly in CI" is not the same
+   claim as "works," and this line stays open until someone does that
+   by hand.
+3. **Packaging & distribution.** Updated 2026-09-28: unsigned installers
+   for all three OSes now exist and are attached to the
+   [v0.1.0 GitHub release](https://github.com/L1avZh/KeyFlow/releases/tag/v0.1.0)
+   (`.dmg`/`.app.tar.gz`, `.exe`/`.msi`, `.AppImage`/`.deb`/`.rpm`),
+   produced by CI via `tauri-action`, not by hand. Still missing: a
+   Homebrew formula, and everything in item #4 below (without which
+   these installers will keep triggering OS security warnings).
 4. **Code signing & notarization.** Required before any of the above are
    distributable without OS warnings. Needs real Apple Developer /
    Windows code-signing credentials this environment doesn't have.

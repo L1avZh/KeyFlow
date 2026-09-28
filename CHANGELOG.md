@@ -4,7 +4,11 @@ All notable changes to this project are documented here. Format loosely
 follows [Keep a Changelog](https://keepachangelog.com/); versioning
 follows [Semantic Versioning](https://semver.org/).
 
-## [0.1.0] — Unreleased
+## [0.1.0] — 2026-09-28
+
+Released with unsigned installers for macOS, Windows x64, and Linux x64
+on the [v0.1.0 GitHub release](https://github.com/L1avZh/KeyFlow/releases/tag/v0.1.0),
+built by CI (`.github/workflows/ci.yml`) on each platform's own runner.
 
 ### Added
 
@@ -33,5 +37,8 @@ follows [Semantic Versioning](https://semver.org/).
 ### Known limitations
 
 See [ROADMAP.md](ROADMAP.md) — most notably, the browser extension is
-architecture-only (no code), and only macOS has been built/tested in
-this repository so far.
+architecture-only (no code); Windows and Linux builds now succeed in CI
+and have installers on the release, but have not yet been manually
+run/clicked-through by a human on those OSes (only macOS has); and no
+code signing/notarization has been set up, so every installer triggers
+an OS security warning on first run.
