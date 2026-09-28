@@ -13,15 +13,15 @@ centered with transparent padding before export, rather than used at
 100% (which would get clipped by circular masks).
 
 Run manually when the source brand icon changes:
-    python3 android/scripts/generate_launcher_icons.py
+    python3 scripts/generate-android-icons.py
 """
 from pathlib import Path
 
 from PIL import Image
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[1]
 SOURCE = REPO_ROOT / "apps/desktop/src-tauri/icons/icon-source.png"
-RES_DIR = REPO_ROOT / "android/app/src/main/res"
+RES_DIR = REPO_ROOT / "apps/android/app/src/main/res"
 
 # dp -> px scale factor per density bucket, for a 108dp adaptive-icon canvas.
 DENSITIES = {
