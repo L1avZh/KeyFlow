@@ -1,4 +1,5 @@
 import { api, friendlyError } from "../api";
+import { escapeHtml } from "../domUtils";
 import { upsertCredential } from "../state";
 import { toast } from "../toast";
 import type { Credential } from "../types";
@@ -13,27 +14,27 @@ export function openCredentialForm(existing?: Credential) {
       <form id="cred-form">
         <div class="kf-field">
           <label for="f-name">Name</label>
-          <input id="f-name" class="kf-input" required placeholder="e.g. GitHub" value="${escapeAttr(existing?.name ?? "")}" />
+          <input id="f-name" class="kf-input" required placeholder="e.g. GitHub" value="${escapeHtml(existing?.name ?? "")}" />
         </div>
         <div class="kf-field">
           <label for="f-url">Website URL</label>
-          <input id="f-url" class="kf-input" required placeholder="https://example.com" value="${escapeAttr(existing?.url ?? "")}" />
+          <input id="f-url" class="kf-input" required placeholder="https://example.com" value="${escapeHtml(existing?.url ?? "")}" />
         </div>
         <div class="kf-field">
           <label for="f-username">Username or email</label>
-          <input id="f-username" class="kf-input" placeholder="you@example.com" value="${escapeAttr(existing?.username ?? "")}" />
+          <input id="f-username" class="kf-input" placeholder="you@example.com" value="${escapeHtml(existing?.username ?? "")}" />
         </div>
         <div class="kf-field">
           <label for="f-password">Password</label>
           <div class="kf-row-gap">
-            <input id="f-password" class="kf-input kf-input-mono kf-flex-1" type="text" value="${escapeAttr(existing?.password ?? "")}" />
+            <input id="f-password" class="kf-input kf-input-mono kf-flex-1" type="text" value="${escapeHtml(existing?.password ?? "")}" />
             <button type="button" class="kf-btn kf-btn-sm" id="f-generate">Generate</button>
           </div>
           <div id="f-strength"></div>
         </div>
         <div class="kf-field">
           <label for="f-tags">Tags (comma separated)</label>
-          <input id="f-tags" class="kf-input" placeholder="work, personal" value="${escapeAttr((existing?.tags ?? []).join(", "))}" />
+          <input id="f-tags" class="kf-input" placeholder="work, personal" value="${escapeHtml((existing?.tags ?? []).join(", "))}" />
         </div>
         <div class="kf-field">
           <label for="f-notes">Notes</label>
@@ -125,12 +126,4 @@ export function openCredentialForm(existing?: Credential) {
       submitBtn.disabled = false;
     }
   });
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
-}
-
-function escapeAttr(s: string): string {
-  return escapeHtml(s);
 }

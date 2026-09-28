@@ -1,6 +1,6 @@
 import { api } from "../api";
 import { openCredentialForm } from "../components/credentialForm";
-import { guardBusy } from "../domUtils";
+import { escapeHtml, guardBusy } from "../domUtils";
 import { removeCredential, state, subscribe, upsertCredential } from "../state";
 import { toast } from "../toast";
 import type { Credential } from "../types";
@@ -158,8 +158,4 @@ export function renderVault(root: HTMLElement, opts: { favoritesOnly?: boolean }
 
 function toInput(c: Credential) {
   return { name: c.name, url: c.url, username: c.username, password: c.password, notes: c.notes, tags: c.tags, favorite: c.favorite };
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 }

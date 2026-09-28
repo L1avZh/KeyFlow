@@ -42,3 +42,30 @@ export function guardBusy<T extends HTMLButtonElement, E extends Event>(button: 
 export function codepointLength(s: string): number {
   return [...s].length;
 }
+
+/**
+ * Escapes text for safe interpolation into `innerHTML`. Every credential
+ * field (name, username, url, notes) is attacker-controllable — imported
+ * from a CSV file, or just typed by whoever set up a phishing-style
+ * "credential" — and several pages render these fields via template
+ * strings assigned to `innerHTML`.
+ *
+ * This used to be reimplemented privately, inconsistently, in three
+ * separate files (vault.ts, credentialForm.ts, commandPalette.ts), and
+ * two more pages that render credential fields the same way — home.ts's
+ * "Recently used" list and security.ts's weak/old/reused/duplicates
+ * lists and Autofill Tester results — had no escaping at all, a genuine
+ * stored-XSS-shaped gap found by grepping every `innerHTML` assignment
+ * in the app for which ones interpolate credential data, not by
+ * assuming the existing per-file copies were applied everywhere they
+ * needed to be. KeyFlow's CSP (`default-src 'self'`, no `unsafe-inline`
+ * for scripts) happens to block inline `<script>`/`onerror=...` from
+ * actually executing today, but relying on CSP alone instead of
+ * escaping output is not a substitute for doing this correctly, and a
+ * future CSP change (or a browser bug) shouldn't be what stands between
+ * an unescaped credential name and script execution in the same
+ * privileged webview that has full Tauri IPC access to the vault.
+ */
+export function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+}

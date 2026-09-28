@@ -1,5 +1,6 @@
 import { api } from "../api";
 import { openCredentialForm } from "../components/credentialForm";
+import { escapeHtml } from "../domUtils";
 import { state, subscribe } from "../state";
 import type { SecurityOverview } from "../types";
 
@@ -56,10 +57,10 @@ export function renderHome(root: HTMLElement, navigate: (r: any) => void) {
         .map(
           (c) => `
         <div class="kf-cred-row" style="cursor:default">
-          <div class="kf-cred-avatar">${c.name[0]?.toUpperCase() ?? "?"}</div>
+          <div class="kf-cred-avatar">${escapeHtml(c.name[0]?.toUpperCase() ?? "?")}</div>
           <div class="kf-cred-main">
-            <div class="kf-cred-name">${c.name}</div>
-            <div class="kf-cred-sub">${c.username}</div>
+            <div class="kf-cred-name">${escapeHtml(c.name)}</div>
+            <div class="kf-cred-sub">${escapeHtml(c.username)}</div>
           </div>
         </div>`
         )

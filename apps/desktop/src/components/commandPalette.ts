@@ -1,4 +1,5 @@
 import { api } from "../api";
+import { escapeHtml } from "../domUtils";
 import { setRoute, state } from "../state";
 import { toast } from "../toast";
 import type { Credential } from "../types";
@@ -117,8 +118,4 @@ export function initCommandPalette(navigate: () => void) {
 
 export function triggerPalette() {
   openPalette?.();
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 }

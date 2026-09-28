@@ -1,4 +1,5 @@
 import { api } from "../api";
+import { escapeHtml } from "../domUtils";
 import type { AutofillMatch, Credential, SecurityOverview } from "../types";
 
 type Tab = "overview" | "weak" | "reused" | "old" | "duplicates" | "autofill-tester";
@@ -35,12 +36,12 @@ export function renderSecurity(root: HTMLElement) {
 
   function credRow(c: Credential): string {
     return `<div class="kf-cred-row" style="cursor:default">
-      <div class="kf-cred-avatar">${c.name[0]?.toUpperCase() ?? "?"}</div>
+      <div class="kf-cred-avatar">${escapeHtml(c.name[0]?.toUpperCase() ?? "?")}</div>
       <div class="kf-cred-main">
-        <div class="kf-cred-name">${c.name}</div>
-        <div class="kf-cred-sub">${c.username || c.url}</div>
+        <div class="kf-cred-name">${escapeHtml(c.name)}</div>
+        <div class="kf-cred-sub">${escapeHtml(c.username || c.url)}</div>
       </div>
-      <span class="kf-badge ${c.strength.band.includes("weak") ? "kf-badge-danger" : ""}">${c.strength.band}</span>
+      <span class="kf-badge ${c.strength.band.includes("weak") ? "kf-badge-danger" : ""}">${escapeHtml(c.strength.band)}</span>
     </div>`;
   }
 
@@ -128,17 +129,17 @@ function renderAutofillTester(container: HTMLElement) {
         .map(
           (m) => `
         <div class="kf-cred-row" style="cursor:default">
-          <div class="kf-cred-avatar">${m.credential.name[0]?.toUpperCase() ?? "?"}</div>
+          <div class="kf-cred-avatar">${escapeHtml(m.credential.name[0]?.toUpperCase() ?? "?")}</div>
           <div class="kf-cred-main">
-            <div class="kf-cred-name">${m.credential.name}</div>
-            <div class="kf-cred-sub">${m.credential.username} · saved for ${m.credential.url}</div>
+            <div class="kf-cred-name">${escapeHtml(m.credential.name)}</div>
+            <div class="kf-cred-sub">${escapeHtml(m.credential.username)} · saved for ${escapeHtml(m.credential.url)}</div>
           </div>
-          <span class="kf-badge kf-badge-success">${m.decision}</span>
+          <span class="kf-badge kf-badge-success">${escapeHtml(m.decision)}</span>
         </div>`
         )
         .join("");
     } catch (e) {
-      resultsEl.innerHTML = `<div class="kf-blocked-banner">⚠️ ${String(e)}</div>`;
+      resultsEl.innerHTML = `<div class="kf-blocked-banner">⚠️ ${escapeHtml(String(e))}</div>`;
     }
   };
   container.querySelector("#tester-go")!.addEventListener("click", run);

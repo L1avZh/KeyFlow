@@ -1,5 +1,5 @@
 import { api, friendlyError } from "../api";
-import { codepointLength, guardBusy } from "../domUtils";
+import { codepointLength, escapeHtml, guardBusy } from "../domUtils";
 import { setAutoLockMinutes, setClipboardClearSeconds, setCredentials, setTheme, state } from "../state";
 import { toast } from "../toast";
 
@@ -229,7 +229,7 @@ function renderImportPreview(root: HTMLElement, preview: Awaited<ReturnType<type
   const el = root.querySelector<HTMLElement>("#s-import-preview")!;
   const warningsHtml = preview.warnings.length
     ? `<ul style="margin:8px 0; padding-left:18px; font-size:12px; color:var(--kf-warning)">${preview.warnings
-        .map((w) => `<li>Row ${w.row}: ${w.message}</li>`)
+        .map((w) => `<li>Row ${w.row}: ${escapeHtml(w.message)}</li>`)
         .join("")}</ul>`
     : "";
   el.innerHTML = `
