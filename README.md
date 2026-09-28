@@ -6,9 +6,14 @@
 <p align="center">A native-feeling credential autofill assistant and password manager — local-first, open source.</p>
 
 <p align="center">
-  <img src="docs/demo.gif" width="700" alt="KeyFlow walkthrough: unlock, home, vault, password generator, security dashboard, and the command palette" />
+  <img src="docs/demo.gif" width="700" alt="KeyFlow walkthrough: unlock, home, vault, password generator, security dashboard, command palette, the browser extension suggesting and filling a login, and the published Windows/macOS/Linux release assets" />
 </p>
-<p align="center"><sub>UI walkthrough with sample data, captured from the app's real frontend code via its <a href="apps/desktop/dev-preview.html">dev preview harness</a> (see <a href="CONTRIBUTING.md">CONTRIBUTING.md</a>) — not a recording of the compiled native window.</sub></p>
+<p align="center"><sub>
+  Frames 1–7 (desktop app): the app's real frontend code, run with sample data via its
+  <a href="apps/desktop/dev-preview.html">dev preview harness</a> (see <a href="CONTRIBUTING.md">CONTRIBUTING.md</a>) — not a recording of the compiled native window, since this sandbox has no display to record from.<br/>
+  Frames 8–10 (browser extension): the real compiled <a href="browser-extension/chrome">extension code</a> running against a sample login page, with its native-messaging responses mocked the same way — not loaded as an installed Chrome extension, since a Chrome enterprise policy on the build machine blocks unpacked extension loading (see <a href="ROADMAP.md">ROADMAP.md</a>).<br/>
+  Frame 11: a real screenshot of the <a href="https://github.com/L1avZh/KeyFlow/releases/tag/v0.1.0">published v0.1.0 release page</a> — the actual evidence for the Windows and Linux builds, since this sandbox can't run or screen-record Windows itself.
+</sub></p>
 
 ---
 
