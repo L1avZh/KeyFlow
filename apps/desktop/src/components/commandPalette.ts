@@ -10,9 +10,22 @@ type Action = {
 };
 
 let openPalette: (() => void) | null = null;
+// Tracks the currently-open palette's own close function, if any. Used
+// both to make a second shortcut-press toggle the palette closed instead
+// of stacking a duplicate on top, and to guarantee the per-open Escape
+// listener below always gets torn down — previously it was only removed
+// when the user dismissed via Escape specifically; dismissing by
+// clicking away or picking an item leaked it on `document` forever
+// (an unbounded, ever-growing listener across a long session).
+let closeCurrent: (() => void) | null = null;
 
 export function initCommandPalette(navigate: () => void) {
   function open() {
+    if (closeCurrent) {
+      closeCurrent();
+      return;
+    }
+
     const backdrop = document.createElement("div");
     backdrop.className = "kf-palette-backdrop";
     backdrop.innerHTML = `
@@ -25,16 +38,20 @@ export function initCommandPalette(navigate: () => void) {
     const input = backdrop.querySelector<HTMLInputElement>(".kf-palette-input")!;
     const results = backdrop.querySelector<HTMLElement>(".kf-palette-results")!;
 
-    const close = () => backdrop.remove();
+    const onEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    const close = () => {
+      document.removeEventListener("keydown", onEscape);
+      backdrop.remove();
+      if (closeCurrent === close) closeCurrent = null;
+    };
+    closeCurrent = close;
+
     backdrop.addEventListener("click", (e) => {
       if (e.target === backdrop) close();
     });
-    document.addEventListener("keydown", function esc(e) {
-      if (e.key === "Escape") {
-        close();
-        document.removeEventListener("keydown", esc);
-      }
-    });
+    document.addEventListener("keydown", onEscape);
 
     const staticActions: Action[] = [
       { label: "Open Vault", hint: "Navigate", run: () => { setRoute("vault"); navigate(); } },

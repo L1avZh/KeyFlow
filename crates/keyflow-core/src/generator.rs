@@ -14,6 +14,20 @@ use serde::{Deserialize, Serialize};
 use crate::error::{KeyflowError, Result};
 use crate::wordlist::WORDLIST;
 
+/// Sanity ceiling on generated-password length. The UI caps its slider
+/// at 64, but that's a UI-only limit, not a security boundary — nothing
+/// stopped a direct Tauri command invocation (e.g. from devtools) from
+/// requesting an enormous `length`. `Vec::with_capacity` on a
+/// pathological value (found by reasoning about what a malicious or
+/// simply buggy caller could send, not by triggering it) would attempt a
+/// huge allocation; on failure, Rust's default global allocator aborts
+/// the *entire process* rather than returning a catchable error — an
+/// uncatchable, self-inflicted denial of service. 1024 is generously
+/// above any real use case while staying trivially cheap to allocate.
+const MAX_PASSWORD_LENGTH: usize = 1024;
+/// Same rationale, for passphrase word count.
+const MAX_PASSPHRASE_WORDS: usize = 128;
+
 const LOWER: &[u8] = b"abcdefghijklmnopqrstuvwxyz";
 const UPPER: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const DIGITS: &[u8] = b"0123456789";
@@ -81,7 +95,7 @@ fn filtered(charset: &[u8], exclude_ambiguous: bool) -> Vec<u8> {
 /// guarantee doesn't itself narrow the search space in a predictable
 /// way), then fills the remainder uniformly at random and shuffles.
 pub fn generate_password(opts: &PasswordOptions) -> Result<String> {
-    if opts.length == 0 {
+    if opts.length == 0 || opts.length > MAX_PASSWORD_LENGTH {
         return Err(KeyflowError::InvalidGeneratorConfig);
     }
     let mut pools: Vec<Vec<u8>> = Vec::new();
@@ -124,7 +138,7 @@ pub fn generate_password(opts: &PasswordOptions) -> Result<String> {
 /// Generates a diceware-style passphrase from KeyFlow's built-in
 /// wordlist (see [`crate::wordlist`]).
 pub fn generate_passphrase(opts: &PassphraseOptions) -> Result<String> {
-    if opts.word_count == 0 || WORDLIST.is_empty() {
+    if opts.word_count == 0 || opts.word_count > MAX_PASSPHRASE_WORDS || WORDLIST.is_empty() {
         return Err(KeyflowError::InvalidGeneratorConfig);
     }
     let mut rng = OsRng;
@@ -318,5 +332,49 @@ mod tests {
         let pw = generate_password(&PasswordOptions::default()).unwrap();
         let strength = estimate_strength(&pw);
         assert!(matches!(strength.band, StrengthBand::Strong | StrengthBand::VeryStrong));
+    }
+
+    /// Regression test for a real bug found during a QA pass: `length`
+    /// and `word_count` come straight from the frontend with no
+    /// server-side bound (the UI's own slider caps are not a security
+    /// boundary — a direct Tauri command invocation could send anything
+    /// representable as a `usize`). Before this bound existed, a
+    /// pathologically large value would have reached
+    /// `Vec::with_capacity`, whose allocation failure aborts the whole
+    /// process rather than returning a catchable error — an uncatchable,
+    /// self-inflicted denial of service. This test only checks the
+    /// guard rejects values just over the new limit; it deliberately
+    /// does not exercise `usize::MAX` itself, since that's exactly the
+    /// uncatchable-abort path being prevented, not something a test can
+    /// safely trigger.
+    #[test]
+    fn rejects_password_length_over_the_sanity_ceiling() {
+        let opts = PasswordOptions { length: MAX_PASSWORD_LENGTH + 1, ..Default::default() };
+        assert!(generate_password(&opts).is_err());
+    }
+
+    #[test]
+    fn accepts_password_length_at_the_sanity_ceiling() {
+        let opts = PasswordOptions { length: MAX_PASSWORD_LENGTH, ..Default::default() };
+        assert!(generate_password(&opts).is_ok());
+    }
+
+    #[test]
+    fn rejects_passphrase_word_count_over_the_sanity_ceiling() {
+        let opts = PassphraseOptions { word_count: MAX_PASSPHRASE_WORDS + 1, ..Default::default() };
+        assert!(generate_passphrase(&opts).is_err());
+    }
+
+    #[test]
+    fn rejects_length_too_short_to_fit_one_char_per_selected_class() {
+        let opts = PasswordOptions {
+            length: 2,
+            uppercase: true,
+            lowercase: true,
+            digits: true,
+            symbols: true,
+            exclude_ambiguous: false,
+        };
+        assert!(generate_password(&opts).is_err());
     }
 }

@@ -81,9 +81,21 @@ export function openCredentialForm(existing?: Credential) {
 
   const form = backdrop.querySelector<HTMLFormElement>("#cred-form")!;
   const errorEl = backdrop.querySelector<HTMLElement>("#f-error")!;
+  const submitBtn = backdrop.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+
+  // A plain `async` submit handler with no guard let a fast double-click
+  // (or double-Enter) fire two add_credential/update_credential calls
+  // before the first IPC round-trip resolved — for "Add login" that's a
+  // literal duplicate credential written to the vault, not just a UI
+  // glitch. Disabling the submit button blocks both a second click *and*
+  // implicit form-submission via Enter while it's disabled.
+  let submitting = false;
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (submitting) return;
+    submitting = true;
+    submitBtn.disabled = true;
     errorEl.textContent = "";
     const input = {
       name: (backdrop.querySelector<HTMLInputElement>("#f-name")!).value.trim(),
@@ -109,6 +121,8 @@ export function openCredentialForm(existing?: Credential) {
       close();
     } catch (err) {
       errorEl.textContent = friendlyError(err);
+      submitting = false;
+      submitBtn.disabled = false;
     }
   });
 }

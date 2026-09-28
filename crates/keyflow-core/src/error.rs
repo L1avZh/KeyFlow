@@ -33,6 +33,9 @@ pub enum KeyflowError {
 
     #[error("password generator was given an impossible configuration")]
     InvalidGeneratorConfig,
+
+    #[error("master password must be at least {min_length} characters")]
+    WeakMasterPassword { min_length: usize },
 }
 
 pub type Result<T> = std::result::Result<T, KeyflowError>;

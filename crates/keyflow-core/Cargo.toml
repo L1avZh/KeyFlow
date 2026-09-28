@@ -20,6 +20,7 @@ time = { version = "0.3", features = ["serde", "formatting", "parsing"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 base64 = "0.22"
 csv = "1"
+unicode-normalization = "0.1"
 
 [dev-dependencies]
 proptest = "1"

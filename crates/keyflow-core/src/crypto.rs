@@ -19,6 +19,7 @@ use argon2::{Algorithm, Argon2, Params, Version};
 use rand::rngs::OsRng;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
+use unicode_normalization::UnicodeNormalization;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use crate::error::{KeyflowError, Result};
@@ -61,12 +62,27 @@ impl KdfParams {
 pub struct VaultKey([u8; KEY_LEN]);
 
 impl VaultKey {
+    /// Derives the vault key from a master password.
+    ///
+    /// The password is normalized to Unicode NFC before hashing. Without
+    /// this, two byte-for-byte different but *visually identical*
+    /// strings (e.g. "café" as a single precomposed U+00E9 vs. as "e" +
+    /// a combining acute accent — indistinguishable to the eye, and both
+    /// things a real keyboard layout, IME, or paste source can produce)
+    /// would derive different keys, silently locking a user out of their
+    /// own vault with what looks, to them, like the exact right
+    /// password. NFC is applied consistently on every derive call, so a
+    /// vault created under one normalization form still unlocks under
+    /// the other.
     pub fn derive(master_password: &str, salt: &[u8; SALT_LEN], params: KdfParams) -> Result<Self> {
+        let mut normalized: String = master_password.nfc().collect();
         let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params.to_argon2_params()?);
         let mut out = [0u8; KEY_LEN];
-        argon2
-            .hash_password_into(master_password.as_bytes(), salt, &mut out)
-            .map_err(|_| KeyflowError::CorruptVault)?;
+        let result = argon2
+            .hash_password_into(normalized.as_bytes(), salt, &mut out)
+            .map_err(|_| KeyflowError::CorruptVault);
+        normalized.zeroize();
+        result?;
         Ok(Self(out))
     }
 
@@ -216,5 +232,30 @@ mod tests {
         // Indirect check: a blob sealed under k1 must open under k2.
         let blob = seal(&k1, b"x", b"").unwrap();
         assert!(open(&k2, &blob, b"").is_ok());
+    }
+
+    /// Regression test for a real bug found during a QA pass: "café" as a
+    /// single precomposed character (NFC) and "café" as "e" plus a
+    /// combining acute accent (NFD) are visually indistinguishable and a
+    /// real keyboard layout, IME, or paste source could produce either
+    /// one — but before NFC normalization was added to `derive`, they
+    /// hashed to two completely different keys. A user could type what
+    /// looks, to them, like their exact correct password and be told the
+    /// vault won't open.
+    #[test]
+    fn nfc_and_nfd_forms_of_the_same_visual_password_derive_the_same_key() {
+        let nfc_password = "caf\u{00e9}-testing"; // é as one precomposed codepoint
+        let nfd_password = "cafe\u{0301}-testing"; // e + combining acute accent
+        assert_ne!(
+            nfc_password.as_bytes(),
+            nfd_password.as_bytes(),
+            "test setup is invalid: these must differ at the byte level for the test to mean anything"
+        );
+
+        let salt = generate_salt();
+        let k1 = VaultKey::derive(nfc_password, &salt, KdfParams::default()).unwrap();
+        let k2 = VaultKey::derive(nfd_password, &salt, KdfParams::default()).unwrap();
+        let blob = seal(&k1, b"secret", b"").unwrap();
+        assert!(open(&k2, &blob, b"").is_ok(), "NFC- and NFD-form passwords must derive the same key");
     }
 }

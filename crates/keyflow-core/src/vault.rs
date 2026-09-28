@@ -17,6 +17,21 @@ use crate::generator::{estimate_strength, StrengthBand};
 
 pub const CURRENT_FORMAT_VERSION: u32 = 1;
 const VERIFIER_PLAINTEXT: &[u8] = b"keyflow-vault-verifier-v1";
+/// Matches the minimum the onboarding and "change master password" UI
+/// have always enforced client-side — but until now, *only* client-side.
+/// Nothing stopped a direct Tauri command invocation (e.g. from the
+/// webview devtools console, or any future caller of this crate) from
+/// creating or re-keying a vault with an empty or trivially short master
+/// password, since `Vault::create`/`change_master_password` performed no
+/// validation of their own. The UI is not a security boundary; this is.
+pub const MIN_MASTER_PASSWORD_LEN: usize = 10;
+
+fn validate_master_password(master_password: &str) -> Result<()> {
+    if master_password.chars().count() < MIN_MASTER_PASSWORD_LEN {
+        return Err(KeyflowError::WeakMasterPassword { min_length: MIN_MASTER_PASSWORD_LEN });
+    }
+    Ok(())
+}
 
 /// On-disk representation. Everything here except `format_version`,
 /// `kdf`, and `salt` is opaque ciphertext — those three fields must stay
@@ -75,6 +90,7 @@ impl Vault {
     /// and writes it to `path`. Fails if a file already exists at
     /// `path` — callers must not silently overwrite an existing vault.
     pub fn create(path: impl Into<PathBuf>, master_password: &str) -> Result<Self> {
+        validate_master_password(master_password)?;
         let path = path.into();
         if path.exists() {
             return Err(KeyflowError::Io(std::io::Error::new(
@@ -163,6 +179,7 @@ impl Vault {
     /// salt, fresh KDF derivation) and saves it. The old password stops
     /// working the moment this returns.
     pub fn change_master_password(&mut self, new_master_password: &str) -> Result<()> {
+        validate_master_password(new_master_password)?;
         let salt = crypto::generate_salt();
         let kdf = KdfParams::default();
         let key = VaultKey::derive(new_master_password, &salt, kdf)?;
@@ -456,21 +473,21 @@ mod tests {
     fn create_refuses_to_overwrite_existing_vault() {
         let dir = tempdir().unwrap();
         let path = vault_path(&dir);
-        Vault::create(&path, "pw1").unwrap();
-        assert!(Vault::create(&path, "pw2").is_err());
+        Vault::create(&path, "test-password-1").unwrap();
+        assert!(Vault::create(&path, "test-password-2").is_err());
     }
 
     #[test]
     fn credentials_persist_across_lock_and_unlock() {
         let dir = tempdir().unwrap();
         let path = vault_path(&dir);
-        let mut vault = Vault::create(&path, "pw").unwrap();
+        let mut vault = Vault::create(&path, "test-password").unwrap();
         vault
             .add_credential(Credential::new("GitHub", "https://github.com", "me@example.com", "s3cret!"))
             .unwrap();
         drop(vault);
 
-        let reopened = Vault::unlock(&path, "pw").unwrap();
+        let reopened = Vault::unlock(&path, "test-password").unwrap();
         assert_eq!(reopened.credentials().len(), 1);
         assert_eq!(reopened.credentials()[0].name, "GitHub");
     }
@@ -479,19 +496,19 @@ mod tests {
     fn changing_master_password_locks_out_the_old_one() {
         let dir = tempdir().unwrap();
         let path = vault_path(&dir);
-        let mut vault = Vault::create(&path, "old-pw").unwrap();
-        vault.change_master_password("new-pw").unwrap();
+        let mut vault = Vault::create(&path, "old-test-password").unwrap();
+        vault.change_master_password("new-test-password").unwrap();
         drop(vault);
 
-        assert!(matches!(Vault::unlock(&path, "old-pw"), Err(KeyflowError::AuthenticationFailed)));
-        assert!(Vault::unlock(&path, "new-pw").is_ok());
+        assert!(matches!(Vault::unlock(&path, "old-test-password"), Err(KeyflowError::AuthenticationFailed)));
+        assert!(Vault::unlock(&path, "new-test-password").is_ok());
     }
 
     #[test]
     fn delete_nonexistent_credential_errors_without_corrupting_vault() {
         let dir = tempdir().unwrap();
         let path = vault_path(&dir);
-        let mut vault = Vault::create(&path, "pw").unwrap();
+        let mut vault = Vault::create(&path, "test-password").unwrap();
         assert!(matches!(vault.delete_credential(Uuid::new_v4()), Err(KeyflowError::CredentialNotFound)));
     }
 
@@ -499,9 +516,9 @@ mod tests {
     fn autofill_matching_respects_domain_rules() {
         let dir = tempdir().unwrap();
         let path = vault_path(&dir);
-        let mut vault = Vault::create(&path, "pw").unwrap();
+        let mut vault = Vault::create(&path, "test-password").unwrap();
         vault
-            .add_credential(Credential::new("GitHub", "https://github.com", "me", "pw"))
+            .add_credential(Credential::new("GitHub", "https://github.com", "me", "test-password"))
             .unwrap();
 
         let legit = Origin::parse("https://github.com/login").unwrap();
@@ -515,7 +532,7 @@ mod tests {
     fn security_overview_flags_weak_and_reused_and_duplicate() {
         let dir = tempdir().unwrap();
         let path = vault_path(&dir);
-        let mut vault = Vault::create(&path, "pw").unwrap();
+        let mut vault = Vault::create(&path, "test-password").unwrap();
         vault.add_credential(Credential::new("Site A", "https://a.example", "me", "abc")).unwrap();
         vault.add_credential(Credential::new("Site B", "https://b.example", "me", "abc")).unwrap();
         vault
@@ -533,8 +550,8 @@ mod tests {
     fn csv_import_preview_flags_weak_missing_and_duplicate_rows() {
         let dir = tempdir().unwrap();
         let path = vault_path(&dir);
-        let mut vault = Vault::create(&path, "pw").unwrap();
-        vault.add_credential(Credential::new("Existing", "https://existing.example", "user", "pw")).unwrap();
+        let mut vault = Vault::create(&path, "test-password").unwrap();
+        vault.add_credential(Credential::new("Existing", "https://existing.example", "user", "test-password")).unwrap();
 
         let csv_text = "name,url,username,password,notes\n\
                          Weak,https://weak.example,user,abc,\n\
@@ -556,7 +573,7 @@ mod tests {
     fn export_json_contains_plaintext_password_and_caller_must_be_warned() {
         let dir = tempdir().unwrap();
         let path = vault_path(&dir);
-        let mut vault = Vault::create(&path, "pw").unwrap();
+        let mut vault = Vault::create(&path, "test-password").unwrap();
         vault.add_credential(Credential::new("Site", "https://site.example", "user", "plaintext-pw")).unwrap();
         let json = vault.export_json_plaintext().unwrap();
         assert!(json.contains("plaintext-pw"));
@@ -574,7 +591,7 @@ mod tests {
 
         let dir = tempdir().unwrap();
         let path = vault_path(&dir);
-        Vault::create(&path, "pw").unwrap();
+        Vault::create(&path, "test-password").unwrap();
 
         let mut json: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
         let ciphertext_b64 = json["body"]["ciphertext"].as_str().unwrap().to_string();
@@ -584,6 +601,148 @@ mod tests {
         json["body"]["ciphertext"] = serde_json::Value::String(STANDARD.encode(ciphertext));
         fs::write(&path, serde_json::to_vec_pretty(&json).unwrap()).unwrap();
 
-        assert!(Vault::unlock(&path, "pw").is_err());
+        assert!(Vault::unlock(&path, "test-password").is_err());
+    }
+
+    /// Regression test for a real bug found during a QA pass: the
+    /// 10-character master-password minimum was enforced only in the
+    /// onboarding/settings UI, not here. Anything that could call
+    /// `Vault::create` directly — including a devtools console invoking
+    /// the `create_vault` Tauri command by hand — could create a vault
+    /// protected by an empty or trivially short password, since the UI
+    /// is not a security boundary.
+    #[test]
+    fn create_rejects_empty_master_password() {
+        let dir = tempdir().unwrap();
+        let path = vault_path(&dir);
+        let result = Vault::create(&path, "");
+        assert!(matches!(result, Err(KeyflowError::WeakMasterPassword { min_length: 10 })));
+        assert!(!path.exists(), "a rejected create() must not leave a vault file behind");
+    }
+
+    #[test]
+    fn create_rejects_master_password_below_minimum() {
+        let dir = tempdir().unwrap();
+        let path = vault_path(&dir);
+        assert!(Vault::create(&path, "short9chr").is_err()); // 9 chars
+    }
+
+    #[test]
+    fn create_accepts_master_password_at_exactly_the_minimum() {
+        let dir = tempdir().unwrap();
+        let path = vault_path(&dir);
+        assert!(Vault::create(&path, "exactly10c").is_ok()); // 10 chars
+    }
+
+    #[test]
+    fn change_master_password_rejects_weak_new_password_without_corrupting_the_vault() {
+        let dir = tempdir().unwrap();
+        let path = vault_path(&dir);
+        let mut vault = Vault::create(&path, "original-password").unwrap();
+        let result = vault.change_master_password("short");
+        assert!(matches!(result, Err(KeyflowError::WeakMasterPassword { .. })));
+        drop(vault);
+        // The rejected change must not have re-keyed the in-memory vault
+        // or the on-disk file — the original password must still work.
+        assert!(Vault::unlock(&path, "original-password").is_ok());
+    }
+
+    #[test]
+    fn very_long_master_password_is_accepted() {
+        let dir = tempdir().unwrap();
+        let path = vault_path(&dir);
+        let long_password = "a".repeat(10_000);
+        Vault::create(&path, &long_password).unwrap();
+        assert!(Vault::unlock(&path, &long_password).is_ok());
+    }
+
+    #[test]
+    fn unicode_master_password_round_trips() {
+        let dir = tempdir().unwrap();
+        let path = vault_path(&dir);
+        let password = "пароль-🔑-日本語のテスト"; // Cyrillic + emoji + Japanese, well over 10 chars
+        Vault::create(&path, password).unwrap();
+        assert!(Vault::unlock(&path, password).is_ok());
+    }
+
+    /// A vault file that is present but zero bytes (e.g. a crashed write
+    /// that never even got to `create_dir_all`/temp-file-write, or a
+    /// filesystem returning a freshly-truncated file) must fail to parse
+    /// cleanly, not panic.
+    #[test]
+    fn empty_vault_file_fails_to_unlock_without_panicking() {
+        let dir = tempdir().unwrap();
+        let path = vault_path(&dir);
+        fs::write(&path, b"").unwrap();
+        assert!(matches!(Vault::unlock(&path, "test-password"), Err(KeyflowError::CorruptVault)));
+    }
+
+    /// Same idea, but for a file that's present and non-empty but isn't
+    /// JSON at all (e.g. disk corruption, or someone pointing KeyFlow at
+    /// the wrong file).
+    #[test]
+    fn non_json_vault_file_fails_to_unlock_without_panicking() {
+        let dir = tempdir().unwrap();
+        let path = vault_path(&dir);
+        fs::write(&path, b"\x00\x01\xff\xfe not json at all").unwrap();
+        assert!(matches!(Vault::unlock(&path, "test-password"), Err(KeyflowError::CorruptVault)));
+    }
+
+    /// A vault file claiming a format version from the future (as if
+    /// written by a newer KeyFlow) must be refused with a specific,
+    /// actionable error rather than misinterpreted.
+    #[test]
+    fn future_format_version_is_rejected_with_a_specific_error() {
+        let dir = tempdir().unwrap();
+        let path = vault_path(&dir);
+        Vault::create(&path, "test-password").unwrap();
+        let mut json: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        json["format_version"] = serde_json::Value::from(CURRENT_FORMAT_VERSION + 1);
+        fs::write(&path, serde_json::to_vec_pretty(&json).unwrap()).unwrap();
+
+        let result = Vault::unlock(&path, "test-password");
+        assert!(matches!(
+            result,
+            Err(KeyflowError::UnsupportedVersion { found, supported })
+            if found == CURRENT_FORMAT_VERSION + 1 && supported == CURRENT_FORMAT_VERSION
+        ));
+    }
+
+    /// Two independent `Vault::unlock` calls against the same file at
+    /// the same time (e.g. a future multi-window scenario, or just two
+    /// threads racing) must both succeed and never corrupt or block on
+    /// each other — unlocking only reads the file.
+    #[test]
+    fn concurrent_unlocks_of_the_same_vault_both_succeed() {
+        let dir = tempdir().unwrap();
+        let path = vault_path(&dir);
+        let mut vault = Vault::create(&path, "test-password").unwrap();
+        vault.add_credential(Credential::new("Site", "https://site.example", "user", "pw")).unwrap();
+
+        let path_a = path.clone();
+        let path_b = path.clone();
+        let handle_a = std::thread::spawn(move || Vault::unlock(&path_a, "test-password").map(|v| v.credentials().len()));
+        let handle_b = std::thread::spawn(move || Vault::unlock(&path_b, "test-password").map(|v| v.credentials().len()));
+
+        assert_eq!(handle_a.join().unwrap().unwrap(), 1);
+        assert_eq!(handle_b.join().unwrap().unwrap(), 1);
+    }
+
+    /// Two credentials with identical name/url/username/password are
+    /// allowed — KeyFlow deliberately enforces no uniqueness constraint
+    /// on add (duplicates are *flagged*, in the security dashboard and
+    /// CSV-import preview, never silently rejected or merged). This test
+    /// exists to document that this is the intended behavior, not an
+    /// oversight, so a future change doesn't "fix" it into a data-loss
+    /// bug (silently dropping a second real credential a user meant to
+    /// keep because it looked like a dupe of the first).
+    #[test]
+    fn fully_identical_credentials_are_both_kept() {
+        let dir = tempdir().unwrap();
+        let path = vault_path(&dir);
+        let mut vault = Vault::create(&path, "test-password").unwrap();
+        vault.add_credential(Credential::new("Site", "https://site.example", "user", "pw")).unwrap();
+        vault.add_credential(Credential::new("Site", "https://site.example", "user", "pw")).unwrap();
+        assert_eq!(vault.credentials().len(), 2);
     }
 }

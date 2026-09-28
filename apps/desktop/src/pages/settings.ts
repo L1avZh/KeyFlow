@@ -1,4 +1,5 @@
 import { api, friendlyError } from "../api";
+import { guardBusy } from "../domUtils";
 import { setAutoLockMinutes, setClipboardClearSeconds, setCredentials, setTheme, state } from "../state";
 import { toast } from "../toast";
 
@@ -113,18 +114,26 @@ export function renderSettings(root: HTMLElement, onLocked: () => void) {
   });
 
   const extStatus = root.querySelector<HTMLElement>("#s-ext-status")!;
-  root.querySelector("#s-ext-register")!.addEventListener("click", async () => {
-    try {
-      const browsers = await api.registerBrowserExtension();
-      extStatus.textContent = `Enabled for: ${browsers.join(", ")}. Load the unpacked extension from browser-extension/chrome, then restart the browser.`;
-    } catch (err) {
-      extStatus.textContent = friendlyError(err);
-    }
-  });
-  root.querySelector("#s-ext-unregister")!.addEventListener("click", async () => {
-    await api.unregisterBrowserExtension();
-    extStatus.textContent = "Disabled.";
-  });
+  const extRegisterBtn = root.querySelector<HTMLButtonElement>("#s-ext-register")!;
+  extRegisterBtn.addEventListener(
+    "click",
+    guardBusy(extRegisterBtn, async () => {
+      try {
+        const browsers = await api.registerBrowserExtension();
+        extStatus.textContent = `Enabled for: ${browsers.join(", ")}. Load the unpacked extension from browser-extension/chrome, then restart the browser.`;
+      } catch (err) {
+        extStatus.textContent = friendlyError(err);
+      }
+    })
+  );
+  const extUnregisterBtn = root.querySelector<HTMLButtonElement>("#s-ext-unregister")!;
+  extUnregisterBtn.addEventListener(
+    "click",
+    guardBusy(extUnregisterBtn, async () => {
+      await api.unregisterBrowserExtension();
+      extStatus.textContent = "Disabled.";
+    })
+  );
 
   const quickToggle = root.querySelector<HTMLInputElement>("#s-quick-unlock")!;
   const quickConfirm = root.querySelector<HTMLElement>("#s-quick-unlock-confirm")!;
@@ -137,63 +146,83 @@ export function renderSettings(root: HTMLElement, onLocked: () => void) {
       toast("Quick unlock disabled.");
     }
   });
-  root.querySelector("#s-quick-confirm-btn")!.addEventListener("click", async () => {
-    const pw = root.querySelector<HTMLInputElement>("#s-quick-pw")!.value;
-    try {
-      await api.setQuickUnlock(true, pw);
-      quickConfirm.style.display = "none";
-      toast("Quick unlock enabled.");
-    } catch (err) {
-      toast(friendlyError(err), "danger");
-      quickToggle.checked = false;
-    }
-  });
+  const quickConfirmBtn = root.querySelector<HTMLButtonElement>("#s-quick-confirm-btn")!;
+  quickConfirmBtn.addEventListener(
+    "click",
+    guardBusy(quickConfirmBtn, async () => {
+      const pw = root.querySelector<HTMLInputElement>("#s-quick-pw")!.value;
+      try {
+        await api.setQuickUnlock(true, pw);
+        quickConfirm.style.display = "none";
+        toast("Quick unlock enabled.");
+      } catch (err) {
+        toast(friendlyError(err), "danger");
+        quickToggle.checked = false;
+      }
+    })
+  );
 
-  root.querySelector("#s-change-pw")!.addEventListener("click", async () => {
-    const p1 = root.querySelector<HTMLInputElement>("#s-newpw1")!;
-    const p2 = root.querySelector<HTMLInputElement>("#s-newpw2")!;
-    const errorEl = root.querySelector<HTMLElement>("#s-pw-error")!;
-    errorEl.textContent = "";
-    if (p1.value.length < 10) {
-      errorEl.textContent = "Use at least 10 characters.";
-      return;
-    }
-    if (p1.value !== p2.value) {
-      errorEl.textContent = "Those passwords don't match.";
-      return;
-    }
-    try {
-      await api.changeMasterPassword(p1.value);
-      p1.value = "";
-      p2.value = "";
-      toast("Master password changed.");
-    } catch (err) {
-      errorEl.textContent = friendlyError(err);
-    }
-  });
+  const changePwBtn = root.querySelector<HTMLButtonElement>("#s-change-pw")!;
+  changePwBtn.addEventListener(
+    "click",
+    guardBusy(changePwBtn, async () => {
+      const p1 = root.querySelector<HTMLInputElement>("#s-newpw1")!;
+      const p2 = root.querySelector<HTMLInputElement>("#s-newpw2")!;
+      const errorEl = root.querySelector<HTMLElement>("#s-pw-error")!;
+      errorEl.textContent = "";
+      if (p1.value.length < 10) {
+        errorEl.textContent = "Use at least 10 characters.";
+        return;
+      }
+      if (p1.value !== p2.value) {
+        errorEl.textContent = "Those passwords don't match.";
+        return;
+      }
+      try {
+        // Guarded because a double-click here would re-encrypt the vault
+        // (fresh salt + key derivation) twice in a row — wasteful, and
+        // briefly races the OS-keychain quick-unlock resync against
+        // itself for no reason.
+        await api.changeMasterPassword(p1.value);
+        p1.value = "";
+        p2.value = "";
+        toast("Master password changed.");
+      } catch (err) {
+        errorEl.textContent = friendlyError(err);
+      }
+    })
+  );
 
-  root.querySelector("#s-export")!.addEventListener("click", async () => {
-    if (!confirm("This will save your passwords in plain text to a file. Continue?")) return;
-    try {
-      const saved = await api.exportJsonViaDialog();
-      if (saved) toast("Exported. Remember to delete the file once you're done with it.");
-    } catch (err) {
-      toast(friendlyError(err), "danger");
-    }
-  });
+  const exportBtn = root.querySelector<HTMLButtonElement>("#s-export")!;
+  exportBtn.addEventListener(
+    "click",
+    guardBusy(exportBtn, async () => {
+      if (!confirm("This will save your passwords in plain text to a file. Continue?")) return;
+      try {
+        const saved = await api.exportJsonViaDialog();
+        if (saved) toast("Exported. Remember to delete the file once you're done with it.");
+      } catch (err) {
+        toast(friendlyError(err), "danger");
+      }
+    })
+  );
 
-  root.querySelector("#s-import")!.addEventListener("click", async () => {
-    try {
-      const text = await api.pickAndReadCsv();
-      if (text === null) return;
-      const preview = await api.previewCsvImport(text);
-      renderImportPreview(root, preview, async () => {
-        setCredentials(await api.listCredentials());
-      });
-    } catch (err) {
-      toast(friendlyError(err), "danger");
-    }
-  });
+  const importBtn = root.querySelector<HTMLButtonElement>("#s-import")!;
+  importBtn.addEventListener(
+    "click",
+    guardBusy(importBtn, async () => {
+      try {
+        const text = await api.pickAndReadCsv();
+        if (text === null) return;
+        const preview = await api.previewCsvImport(text);
+        renderImportPreview(root, preview, async () => {
+          setCredentials(await api.listCredentials());
+        });
+      } catch (err) {
+        toast(friendlyError(err), "danger");
+      }
+    })
+  );
 }
 
 function renderImportPreview(root: HTMLElement, preview: Awaited<ReturnType<typeof api.previewCsvImport>>, onCommitted: () => void) {
@@ -208,10 +237,17 @@ function renderImportPreview(root: HTMLElement, preview: Awaited<ReturnType<type
     ${warningsHtml}
     <button class="kf-btn kf-btn-primary kf-btn-sm" id="s-import-commit">Import ${preview.credentials.length} logins</button>
   `;
-  el.querySelector("#s-import-commit")!.addEventListener("click", async () => {
-    await api.commitImport(preview.credentials);
-    toast("Import complete.");
-    el.innerHTML = "";
-    onCommitted();
-  });
+  // Guarded: commit_import has no dedup on the backend (only the preview
+  // step warns about duplicates) — an unguarded double-click here wrote
+  // every previewed row into the vault twice.
+  const commitBtn = el.querySelector<HTMLButtonElement>("#s-import-commit")!;
+  commitBtn.addEventListener(
+    "click",
+    guardBusy(commitBtn, async () => {
+      await api.commitImport(preview.credentials);
+      toast("Import complete.");
+      el.innerHTML = "";
+      onCommitted();
+    })
+  );
 }

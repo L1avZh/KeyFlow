@@ -1,5 +1,6 @@
 import { api } from "../api";
 import { openCredentialForm } from "../components/credentialForm";
+import { guardBusy } from "../domUtils";
 import { removeCredential, state, subscribe, upsertCredential } from "../state";
 import { toast } from "../toast";
 import type { Credential } from "../types";
@@ -87,12 +88,21 @@ export function renderVault(root: HTMLElement, opts: { favoritesOnly?: boolean }
 
     for (const cred of items) {
       const row = listEl.querySelector<HTMLElement>(`[data-id="${cred.id}"]`)!;
-      row.querySelector(".kf-star")!.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        const updated = await api.updateCredential(cred.id, { ...toInput(cred), favorite: !cred.favorite });
-        upsertCredential(updated);
-        draw();
-      });
+      const starBtn = row.querySelector<HTMLButtonElement>(".kf-star")!;
+      starBtn.addEventListener(
+        "click",
+        guardBusy(starBtn, async (e: MouseEvent) => {
+          e.stopPropagation();
+          // Without the guard, two rapid clicks both read the same
+          // pre-toggle `cred.favorite` from this closure (captured at
+          // the last draw()) and send the same target value twice —
+          // harmless in outcome, but two redundant vault writes and
+          // re-renders for one click's worth of user intent.
+          const updated = await api.updateCredential(cred.id, { ...toInput(cred), favorite: !cred.favorite });
+          upsertCredential(updated);
+          draw();
+        })
+      );
       row.querySelector<HTMLElement>(".kf-copy-user")!.addEventListener("click", async (e) => {
         e.stopPropagation();
         await api.copyWithClipboardTimeout(cred.username, state.clipboardClearSeconds);
@@ -104,13 +114,17 @@ export function renderVault(root: HTMLElement, opts: { favoritesOnly?: boolean }
         await api.touchCredentialUsed(cred.id);
         toast(`Password copied — clears in ${state.clipboardClearSeconds}s.`);
       });
-      row.querySelector<HTMLElement>(".kf-delete")!.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        if (!confirm(`Delete "${cred.name}"? This can't be undone.`)) return;
-        await api.deleteCredential(cred.id);
-        removeCredential(cred.id);
-        draw();
-      });
+      const deleteBtn = row.querySelector<HTMLButtonElement>(".kf-delete")!;
+      deleteBtn.addEventListener(
+        "click",
+        guardBusy(deleteBtn, async (e: MouseEvent) => {
+          e.stopPropagation();
+          if (!confirm(`Delete "${cred.name}"? This can't be undone.`)) return;
+          await api.deleteCredential(cred.id);
+          removeCredential(cred.id);
+          draw();
+        })
+      );
       row.addEventListener("click", () => openCredentialForm(cred));
     }
   }
