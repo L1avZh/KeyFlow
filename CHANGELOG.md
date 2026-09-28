@@ -34,6 +34,48 @@ follows [Semantic Versioning](https://semver.org/).
   contain at all, silently leaving the file untouched. Now corrupts the
   ciphertext deterministically instead.
 
+#### QA pass (2026-09-28): 8 confirmed bugs found and fixed
+
+Full details and severities in the QA report shared alongside this
+release; summary here for the changelog:
+
+- **Security**: `Vault::create`/`change_master_password` had no
+  server-side minimum-password-length enforcement — only the UI did.
+  Added `validate_master_password` as the real boundary.
+- **Security-shaped**: several pages (`home.ts`, `security.ts`,
+  `settings.ts`'s import-warning list) rendered credential-derived
+  fields into `innerHTML` without escaping. Consolidated four duplicate/
+  missing `escapeHtml` implementations into one shared copy in
+  `domUtils.ts` and applied it everywhere. Verified via a real injected
+  payload in the running UI, not just code review.
+- **Correctness**: `VaultKey::derive` didn't Unicode-normalize the
+  master password, so two visually-identical passwords in different
+  normalization forms (NFC vs. NFD) derived different keys. Now
+  normalizes to NFC.
+- **Correctness**: `Origin::is_ip()` didn't recognize bracketed IPv6
+  hosts (`url::Url::host_str()`'s actual format), so IPv4-mapped IPv6
+  literals could be parsed as hierarchical domains instead of IPs.
+- **Robustness/DoS**: `generate_password`/`generate_passphrase` had no
+  upper bound on `length`/`word_count`, and the agent socket's
+  per-connection reader had no bound on line size — both could exhaust
+  memory or abort the process from a value/input a real caller
+  shouldn't be able to send in normal use. Both now bounded.
+- **Robustness (Windows)**: a failed named-pipe `connect()` permanently
+  killed the whole agent socket instead of retrying.
+- **Frontend**: the command palette leaked a `document`-level keydown
+  listener on every dismissal that wasn't via Escape, and stacked
+  duplicate instances if opened while already open.
+- **Frontend**: the Add/Edit credential form and CSV-import commit
+  button had no re-entrancy guard, so a fast double-click created a
+  literal duplicate credential (import had no dedup at all). Fixed via
+  a new shared `guardBusy()` helper, applied to all similar buttons.
+- Also fixed a UX regression introduced by the master-password fix
+  itself: JS `.length` and Rust's `.chars().count()` disagree for
+  emoji-heavy passwords, so the frontend's own check could pass
+  something the backend then rejected.
+
+24 new regression tests added (`keyflow-core` went from 47 → 71 tests).
+
 ### Known limitations (new this round)
 
 Firefox and Safari support isn't implemented. The unpacked Chrome
