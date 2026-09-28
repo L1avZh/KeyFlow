@@ -1,0 +1,66 @@
+# This crate is deliberately its own Cargo workspace (the empty
+# [workspace] table below), not a member of the repository's root
+# workspace. Two reasons:
+#
+# 1. UniFFI's generated FFI scaffolding catches Rust panics at the
+#    Kotlin/Rust boundary and turns them into a catchable exception,
+#    which requires `panic = "unwind"`. The root workspace's release
+#    profile sets `panic = "abort"` for the desktop app, and Cargo's
+#    panic strategy must be uniform across an entire build graph — it
+#    cannot be overridden per package. Giving this crate its own
+#    workspace lets it set its own release profile without touching the
+#    desktop app's.
+# 2. Android cross-compilation (via `cargo ndk`) only ever needs to build
+#    this one crate and its `keyflow-core` dependency, not the full
+#    desktop/Tauri graph — an isolated workspace keeps that build fast
+#    and its `Cargo.lock` independent of desktop-only dependencies.
+[workspace]
+
+[package]
+name = "keyflow-mobile"
+version = "0.1.0"
+edition = "2021"
+authors = ["KeyFlow Contributors"]
+license = "MIT"
+repository = "https://github.com/L1avZh/KeyFlow"
+description = "UniFFI bridge exposing keyflow-core's vault/crypto/generator/domain-matching engine to the Android app (Kotlin), with no reimplementation of security-sensitive logic."
+publish = false
+
+[lib]
+name = "keyflow_mobile"
+# cdylib for Android (.so, loaded via System.loadLibrary at runtime),
+# staticlib for any future iOS work, lib so `cargo test`/the bindgen
+# helper binary can link it directly on the host.
+crate-type = ["cdylib", "staticlib", "lib"]
+
+[dependencies]
+keyflow-core = { path = "../keyflow-core" }
+uniffi = "0.28"
+thiserror = "1"
+time = { version = "0.3", features = ["parsing", "formatting"] }
+uuid = "1"
+
+[dev-dependencies]
+tempfile = "3"
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "uniffi-bindgen/src/main.rs"
+required-features = ["uniffi-bindgen"]
+
+[features]
+# Pulls in uniffi's CLI/codegen machinery (clap, the bindings generators)
+# only for the `uniffi-bindgen` helper binary below, turning this crate's
+# compiled metadata into Kotlin source — never enabled in the actual
+# `.so`/`.a` shipped to Android, since the [[bin]] target that needs it
+# is feature-gated and cargo-ndk never passes this feature.
+uniffi-bindgen = ["uniffi/cli"]
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
+panic = "unwind"
+
+[lints.rust]
+unsafe_code = "forbid"
