@@ -9,6 +9,9 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+permissions:
+  contents: write # desktop-build needs this to create/attach to a release
+
 jobs:
   # keyflow-core is pure Rust with no GUI dependencies, so it can be
   # built and tested on all three target OSes cheaply — this is the
