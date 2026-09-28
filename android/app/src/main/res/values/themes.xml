@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Main theme is a thin shell — the real UI is Compose/Material3
+         (see ui/theme/Theme.kt); this just sets the window background
+         and status/nav bar so there's no flash-of-wrong-theme before
+         Compose takes over. -->
+    <style name="Theme.KeyFlow" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/kf_bg_light</item>
+        <item name="android:statusBarColor">@color/kf_bg_light</item>
+        <item name="android:navigationBarColor">@color/kf_bg_light</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <!-- androidx core-splashscreen: consistent behavior pre/post Android 12
+         without an artificial delay — it's dismissed automatically as
+         soon as MainActivity's first Compose frame is drawn. -->
+    <style name="Theme.KeyFlow.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/kf_accent_1</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.KeyFlow</item>
+    </style>
+
+    <style name="Theme.KeyFlow.Transparent" parent="Theme.KeyFlow">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+</resources>

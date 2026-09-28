@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Same brand palette as the desktop app's kf-accent-1 and light-mode
+         kf-bg CSS variables (apps/desktop/src/style.css), so the Android
+         app reads as the same product rather than a reskin. The teal
+         accent (kf-accent-2 there) is used only inside Compose's own
+         color scheme (ui/theme/Color.kt), not from an Android View-XML
+         context, so it has no entry here. -->
+    <color name="kf_accent_1">#4338CA</color>
+    <color name="kf_bg_light">#F6F7FB</color>
+    <color name="kf_bg_dark">#14151B</color>
+    <!-- Adaptive-icon background layer, behind the centered logo mark. -->
+    <color name="ic_launcher_background">#4338CA</color>
+</resources>

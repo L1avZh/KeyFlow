@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">KeyFlow</string>
+    <string name="autofill_unlock_prompt">Unlock KeyFlow to fill this</string>
+    <string name="biometric_prompt_title">Unlock KeyFlow</string>
+    <string name="biometric_prompt_subtitle">Use your fingerprint or face to unlock your vault</string>
+</resources>

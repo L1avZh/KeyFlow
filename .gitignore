@@ -30,3 +30,17 @@ keyflow-export*.json
 
 # Icon build scratch
 apps/desktop/src-tauri/icons/icon-source.png.bak
+
+# Android
+android/.gradle/
+android/local.properties
+android/signing.properties
+android/*.keystore
+android/*.jks
+android/app/build/
+android/app/.cxx/
+android/build/
+android/captures/
+android/.kotlin/
+*.hprof
+crates/keyflow-mobile/target/
