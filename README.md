@@ -5,6 +5,11 @@
 <h1 align="center">KeyFlow</h1>
 <p align="center">A native-feeling credential autofill assistant and password manager — local-first, open source.</p>
 
+<p align="center">
+  <img src="docs/demo.gif" width="700" alt="KeyFlow walkthrough: unlock, home, vault, password generator, security dashboard, and the command palette" />
+</p>
+<p align="center"><sub>UI walkthrough with sample data, captured from the app's real frontend code via its <a href="apps/desktop/dev-preview.html">dev preview harness</a> (see <a href="CONTRIBUTING.md">CONTRIBUTING.md</a>) — not a recording of the compiled native window.</sub></p>
+
 ---
 
 ## What this is

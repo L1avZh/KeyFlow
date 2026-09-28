@@ -41,11 +41,11 @@ function makeCred(overrides: Record<string, any>) {
 }
 
 let vaultCreds = [
-  makeCred({ name: "GitHub", url: "https://github.com", username: "liav@example.com", password: "Xk9#mQ2$pL7vR4nW!8zT", favorite: true }),
-  makeCred({ name: "Gmail (personal)", url: "https://mail.google.com", username: "liav@gmail.com", password: "abc123", tags: ["personal"] }),
-  makeCred({ name: "Gmail (work)", url: "https://mail.google.com", username: "liav@company.com", password: "Tr0ub4dor&3xtra!Long", tags: ["work"] }),
-  makeCred({ name: "Old Forum", url: "https://forum.example.net", username: "liav", password: "abc123", updated_at: new Date(Date.now() - 400 * 86400000).toISOString(), last_used_at: null }),
-  makeCred({ name: "Stripe", url: "https://dashboard.stripe.com", username: "liav@company.com", password: "9!vQxR2$kLp8mZ7wYt3B", favorite: true, last_used_at: null }),
+  makeCred({ name: "GitHub", url: "https://github.com", username: "jordan@example.com", password: "Xk9#mQ2$pL7vR4nW!8zT", favorite: true }),
+  makeCred({ name: "Gmail (personal)", url: "https://mail.google.com", username: "jordan@gmail.com", password: "abc123", tags: ["personal"] }),
+  makeCred({ name: "Gmail (work)", url: "https://mail.google.com", username: "jordan@company.com", password: "Tr0ub4dor&3xtra!Long", tags: ["work"] }),
+  makeCred({ name: "Old Forum", url: "https://forum.example.net", username: "jordan", password: "abc123", updated_at: new Date(Date.now() - 400 * 86400000).toISOString(), last_used_at: null }),
+  makeCred({ name: "Stripe", url: "https://dashboard.stripe.com", username: "jordan@company.com", password: "9!vQxR2$kLp8mZ7wYt3B", favorite: true, last_used_at: null }),
 ];
 let unlocked = false;
 
