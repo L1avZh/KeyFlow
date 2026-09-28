@@ -84,8 +84,22 @@ impl Origin {
         })
     }
 
+    /// True if this origin's host is a literal IP address — IPv4
+    /// (`192.168.1.1`) or IPv6, which `url::Url::host_str()` returns in
+    /// *bracketed* form (`[::1]`, per the WHATWG URL spec), unlike
+    /// `std::net::IpAddr`'s parser, which rejects brackets. Found via a
+    /// real parse-and-print probe, not by inspection alone: without
+    /// stripping the brackets first, every IPv6 host silently fell
+    /// through `is_ip()` as `false` and was instead run through the
+    /// dot-label domain-matching logic below — harmless for a bare IPv6
+    /// address (no dots to split on), but for an IPv4-mapped IPv6
+    /// literal like `[::ffff:192.168.1.1]` (which *does* contain dots),
+    /// that logic would treat it as a hierarchical DNS name with a fake
+    /// "TLD", defeating the "IP host never treated as having subdomains"
+    /// guarantee this module otherwise enforces.
     fn is_ip(&self) -> bool {
-        IpAddr::from_str(&self.host).is_ok()
+        let unbracketed = self.host.strip_prefix('[').and_then(|h| h.strip_suffix(']')).unwrap_or(&self.host);
+        IpAddr::from_str(unbracketed).is_ok()
     }
 
     fn is_dev_host(&self) -> bool {
@@ -335,6 +349,48 @@ mod tests {
         let saved = origin("http://1.1.1.1");
         let candidate = origin("http://evil.1.1.1.1.attacker.com");
         assert_eq!(evaluate_match(&saved, &candidate), MatchDecision::NoMatch);
+    }
+
+    /// Regression test for a real bug found during a QA pass:
+    /// `url::Url::host_str()` returns IPv6 hosts bracketed (`"[::1]"`,
+    /// per the WHATWG URL spec), but `std::net::IpAddr::from_str`
+    /// rejects brackets — so `is_ip()` returned `false` for every IPv6
+    /// host before the fix, routing it through the dot-label
+    /// domain-matching logic instead of the dedicated IP-exact-match
+    /// path.
+    #[test]
+    fn ipv6_loopback_matches_itself_exactly() {
+        let saved = origin("http://[::1]:8080");
+        let candidate = origin("http://[::1]:8080");
+        assert_eq!(evaluate_match(&saved, &candidate), MatchDecision::ExactMatch);
+    }
+
+    #[test]
+    fn different_ipv6_addresses_do_not_match() {
+        let saved = origin("http://[::1]");
+        let candidate = origin("http://[::2]");
+        assert_eq!(evaluate_match(&saved, &candidate), MatchDecision::NoMatch);
+    }
+
+    /// The specific failure mode the bug allowed: an IPv4-mapped IPv6
+    /// literal contains embedded dots (unlike a bare IPv6 address), so
+    /// if it were ever routed through the domain-matching path instead
+    /// of the IP-exact-match path, `host.split('.')` would carve it into
+    /// fake DNS-style labels — here, two *different* mapped addresses
+    /// that happen to share a "1]" trailing label must never be treated
+    /// as a domain/subdomain pair.
+    #[test]
+    fn ipv4_mapped_ipv6_literal_is_never_treated_as_a_hierarchical_domain() {
+        let saved = origin("http://[::ffff:192.168.1.1]");
+        let candidate = origin("http://[::ffff:10.0.0.1]");
+        assert_eq!(evaluate_match(&saved, &candidate), MatchDecision::NoMatch);
+    }
+
+    #[test]
+    fn ipv4_mapped_ipv6_literal_matches_itself_exactly() {
+        let saved = origin("http://[::ffff:192.168.1.1]:9000");
+        let candidate = origin("http://[::ffff:192.168.1.1]:9000");
+        assert_eq!(evaluate_match(&saved, &candidate), MatchDecision::ExactMatch);
     }
 
     #[test]

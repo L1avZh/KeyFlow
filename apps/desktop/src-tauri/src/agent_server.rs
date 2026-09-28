@@ -29,8 +29,43 @@ use std::io;
 use keyflow_agent::{AgentRequest, AgentResponse, MatchSummary};
 use keyflow_core::domain::Origin;
 use tauri::{AppHandle, Manager};
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use uuid::Uuid;
+
+/// Our JSON requests/responses are tiny (a UUID, an origin string, a
+/// username/password) — 64 KiB is enormously generous headroom while
+/// still bounding the read.
+const MAX_LINE_BYTES: usize = 64 * 1024;
+
+/// Reads one newline-delimited line, capped at `MAX_LINE_BYTES`.
+///
+/// `BufReader::lines()`/`read_until` grow their buffer without any limit
+/// until they find the delimiter or hit EOF — found by reasoning about
+/// what a same-OS-user local process (the disclosed trust boundary for
+/// this socket; see the module doc) could do by simply connecting and
+/// writing an endless stream of bytes with no newline. Each such
+/// connection would accumulate memory forever, and since connections are
+/// unbounded too, several of them could exhaust memory — a local denial
+/// of service against the whole desktop app, not just this feature.
+/// Wrapping the reader in `.take()` for each read means the underlying
+/// stream reports EOF once the cap is hit, so `read_until` can't grow
+/// past it.
+async fn read_line_bounded<R: AsyncBufRead + Unpin>(reader: &mut R) -> io::Result<Option<String>> {
+    let mut buf = Vec::new();
+    let mut limited = reader.take(MAX_LINE_BYTES as u64);
+    let n = limited.read_until(b'\n', &mut buf).await?;
+    if n == 0 {
+        return Ok(None); // clean EOF, nothing read at all
+    }
+    if buf.last() != Some(&b'\n') {
+        // Either the byte cap was hit before a newline appeared, or the
+        // connection closed mid-line. Either way, don't try to parse a
+        // partial/oversized buffer as JSON.
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "line exceeds maximum size or connection closed mid-line"));
+    }
+    buf.pop();
+    String::from_utf8(buf).map(Some).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+}
 
 use crate::state::AppState;
 
@@ -110,13 +145,13 @@ where
     S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin,
 {
     let (reader, mut writer) = tokio::io::split(stream);
-    let mut lines = BufReader::new(reader).lines();
+    let mut reader = BufReader::new(reader);
 
     loop {
-        let line = match lines.next_line().await {
+        let line = match read_line_bounded(&mut reader).await {
             Ok(Some(l)) => l,
             Ok(None) => return, // client disconnected
-            Err(_) => return,
+            Err(_) => return,   // malformed/oversized line — nothing safe to do but close
         };
         let response = match serde_json::from_str::<AgentRequest>(&line) {
             Ok(request) => handle_request(&app, request),
@@ -164,7 +199,21 @@ async fn run(app: AppHandle) -> io::Result<()> {
     let mut server = ServerOptions::new().first_pipe_instance(true).create(&pipe_name)?;
 
     loop {
-        server.connect().await?;
+        // A `connect()` failure used to propagate straight out of `run()`
+        // via `?`, which — because `spawn()` below only logs a failed
+        // `run()` rather than restarting it — permanently killed the
+        // *entire* agent socket after a single failed connection
+        // attempt, with no retry and no visible indication beyond a
+        // stderr line. A failed/aborted connect on one pipe instance is
+        // exactly the kind of transient event that shouldn't take down
+        // every future browser-extension request for the rest of the
+        // app's lifetime. (Static fix — not runtime-verified on Windows
+        // in this environment; see ROADMAP.md.)
+        if let Err(e) = server.connect().await {
+            eprintln!("keyflow agent pipe: connect failed, recreating and retrying: {e}");
+            server = ServerOptions::new().create(&pipe_name)?;
+            continue;
+        }
         let connected = server;
         // Create the next instance before handing this one off, so a
         // second client can queue up while we're serving the first.

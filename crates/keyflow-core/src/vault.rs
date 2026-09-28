@@ -745,4 +745,54 @@ mod tests {
         vault.add_credential(Credential::new("Site", "https://site.example", "user", "pw")).unwrap();
         assert_eq!(vault.credentials().len(), 2);
     }
+
+    /// A UTF-8 BOM at the start of the file (routine for CSVs saved by
+    /// Excel or Windows Notepad) must not corrupt header detection —
+    /// probed directly rather than assumed: the `csv` crate turns out to
+    /// already strip a leading BOM before header parsing, so this is a
+    /// confirmation test, not a bug fix.
+    #[test]
+    fn bom_prefixed_csv_still_detects_headers_correctly() {
+        let dir = tempdir().unwrap();
+        let path = vault_path(&dir);
+        let vault = Vault::create(&path, "test-password").unwrap();
+        let csv_with_bom = "\u{FEFF}name,url,username,password,notes\nGitHub,https://github.com,user,pw123,\n";
+        let preview = vault.preview_csv_import(csv_with_bom).unwrap();
+        assert_eq!(preview.credentials.len(), 1);
+        assert_eq!(preview.credentials[0].name, "GitHub");
+    }
+
+    #[test]
+    fn empty_csv_file_is_not_an_error_and_imports_nothing() {
+        let dir = tempdir().unwrap();
+        let path = vault_path(&dir);
+        let vault = Vault::create(&path, "test-password").unwrap();
+        let preview = vault.preview_csv_import("").unwrap();
+        assert_eq!(preview.credentials.len(), 0);
+    }
+
+    #[test]
+    fn header_only_csv_imports_nothing_without_error() {
+        let dir = tempdir().unwrap();
+        let path = vault_path(&dir);
+        let vault = Vault::create(&path, "test-password").unwrap();
+        let preview = vault.preview_csv_import("name,url,username,password,notes\n").unwrap();
+        assert_eq!(preview.credentials.len(), 0);
+        assert_eq!(preview.warnings.len(), 0);
+    }
+
+    #[test]
+    fn csv_missing_expected_columns_entirely_does_not_panic() {
+        let dir = tempdir().unwrap();
+        let path = vault_path(&dir);
+        let vault = Vault::create(&path, "test-password").unwrap();
+        // None of the columns this importer looks for are present at all.
+        let preview = vault.preview_csv_import("foo,bar\nbaz,qux\n").unwrap();
+        // Every field falls back to empty; the row is still "imported"
+        // (as an all-blank entry) rather than panicking — documented
+        // here as today's actual behavior for a completely
+        // unrecognized CSV shape, flagged via warnings for missing URL.
+        assert_eq!(preview.credentials.len(), 1);
+        assert!(preview.warnings.iter().any(|w| w.message.contains("no URL")));
+    }
 }
