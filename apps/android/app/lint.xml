@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!--
+      UniFFI's own generated Kotlin bindings (regenerated on every build
+      by :app:generateUniffiBindings, never hand-edited — see
+      build.gradle.kts) guard `java.lang.ref.Cleaner` (API 33+) behind a
+      runtime `Class.forName("java.lang.ref.Cleaner")` / catch
+      ClassNotFoundException check rather than a `Build.VERSION.SDK_INT`
+      comparison, since this same generated code also targets non-Android
+      JVM targets where SDK_INT doesn't exist. Lint's NewApi check can't
+      trace that reflection-based guard and flags it as unsafe, but it is
+      the documented, widely-used UniFFI pattern and is safe at runtime.
+      Scoped to only this generated path — NewApi stays fully enforced
+      everywhere else, including our own code.
+    -->
+    <issue id="NewApi">
+        <ignore path="**/generated/uniffi/**" />
+    </issue>
+    <!--
+      mipmap-anydpi-v26 is the standard, universally-used Android
+      convention for adaptive icons, used by every real app regardless of
+      minSdk — "anydpi" alone isn't a resolvable qualifier on its own
+      (confirmed: renaming this directory to "mipmap-anydpi" breaks
+      resource linking entirely), so the "-v26" suffix here isn't the
+      redundant minSdk-vs-qualifier duplication this check assumes.
+    -->
+    <issue id="ObsoleteSdkInt">
+        <ignore path="**/mipmap-anydpi-v26/**" />
+    </issue>
+</lint>

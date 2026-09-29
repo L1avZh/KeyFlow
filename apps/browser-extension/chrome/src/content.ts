@@ -4,7 +4,7 @@
 // script via chrome.runtime.sendMessage, so the background script (which
 // the browser gives an authoritative origin for) is what actually gates
 // what gets released. See ARCHITECTURE.md §4 and
-// browser-extension/README.md for the non-negotiables this follows:
+// apps/browser-extension/README.md for the non-negotiables this follows:
 // no autofill without a fresh per-origin round trip, no caching a
 // decision across navigations, and the extension never handles the
 // master password or vault key — only, after the user explicitly picks

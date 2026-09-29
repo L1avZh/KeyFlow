@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ backup/transfer rules. Excludes everything: KeyFlow has no
+  server-side sync feature (see PRIVACY.md), so the only thing an OS
+  backup or device-to-device transfer could copy is the encrypted vault
+  file and the DataStore preferences file — deliberately excluded so a
+  vault never leaves this device via any channel other than the export
+  feature the user explicitly triggers from Settings.
+-->
+<data-extraction-rules>
+    <cloud-backup disableIfNoEncryptionCapability="false">
+        <exclude domain="root" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+    </device-transfer>
+</data-extraction-rules>

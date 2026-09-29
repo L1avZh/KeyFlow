@@ -33,7 +33,7 @@ that it still matches the current origin.
 
 1. Build the extension:
    ```bash
-   cd browser-extension/chrome
+   cd apps/browser-extension/chrome
    npm install
    npm run build
    ```
@@ -48,7 +48,7 @@ that it still matches the current origin.
    see `apps/desktop/src-tauri/src/browser_extension.rs`.
 4. In Chrome (or Edge/Brave/Chromium), open `chrome://extensions`,
    enable **Developer mode**, click **Load unpacked**, and select
-   `browser-extension/chrome`.
+   `apps/browser-extension/chrome`.
 5. Restart the browser so it picks up the newly registered native
    messaging host, then visit any page with a login form.
 

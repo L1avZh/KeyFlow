@@ -1,6 +1,6 @@
 //! Registers `keyflow-native-host` as a native messaging host for
 //! whichever Chromium-based browsers are actually installed, so the
-//! KeyFlow browser extension (browser-extension/chrome) can reach it via
+//! KeyFlow browser extension (apps/browser-extension/chrome) can reach it via
 //! `chrome.runtime.sendNativeMessage`.
 //!
 //! This only writes the small JSON manifest (and, on Windows, the
@@ -8,7 +8,7 @@
 //! executable you're allowed to launch for this extension ID, talking
 //! stdio". It grants no permissions beyond that, and only for the one
 //! pinned extension ID this build ships (see
-//! `browser-extension/chrome/manifest.json`'s `key` field) — a
+//! `apps/browser-extension/chrome/manifest.json`'s `key` field) — a
 //! different, unknown extension claiming the same name would not be in
 //! `allowed_origins` and the browser itself would refuse to launch the
 //! host for it.
@@ -19,7 +19,7 @@ use serde_json::json;
 use tauri::{AppHandle, Manager};
 
 const NATIVE_HOST_NAME: &str = "app.keyflow.native_host";
-/// Must match the extension ID that `browser-extension/chrome/manifest.json`'s
+/// Must match the extension ID that `apps/browser-extension/chrome/manifest.json`'s
 /// pinned `key` deterministically produces.
 const EXTENSION_ID: &str = "lkljkibkbdbgjmljnhoioceloeiiigmj";
 

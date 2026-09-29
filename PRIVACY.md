@@ -12,16 +12,23 @@ software.
 
 - **Your vault**: `~/Library/Application Support/app.keyflow.desktop/vault.keyflow`
   on macOS (the OS-appropriate equivalent on Windows/Linux — Tauri's
-  `app_data_dir()` resolver picks the platform-correct location).
+  `app_data_dir()` resolver picks the platform-correct location; on
+  Android, the app's private internal storage, `filesDir/vault.keyflow`,
+  never externally readable by other apps without root).
   Encrypted at rest — see SECURITY.md.
 - **UI preferences** (theme, auto-lock timeout, clipboard-clear timeout):
-  stored in the desktop webview's `localStorage`, on-device only.
+  stored in the desktop webview's `localStorage` (Android: Jetpack
+  DataStore, same private app storage), on-device only.
 - **The optional quick-unlock secret**: your master password, stored in
   the OS's own secure storage (Keychain/Credential Manager/Secret
-  Service) *only if you explicitly enable it* in Settings. See
-  SECURITY.md for the trade-off this represents.
+  Service on desktop; Android Keystore-encrypted, gated behind
+  `BiometricPrompt`, on Android) *only if you explicitly enable it* in
+  Settings. See SECURITY.md for the trade-off this represents.
 
-Nothing else is written anywhere by KeyFlow.
+Nothing else is written anywhere by KeyFlow, on any platform. The
+Android app additionally sets `android:allowBackup="false"` and excludes
+everything from Android's own backup/device-transfer mechanisms, so an
+OS-level backup can't copy the vault off-device either.
 
 ## What KeyFlow does not do
 
@@ -31,11 +38,13 @@ Nothing else is written anywhere by KeyFlow.
   codebase. (If that ever changes, it will be opt-in, disclosed here
   first, and will never include credential data, full URLs of your
   saved sites, or anything else identifying what you have stored.)
-- No network requests are made by the desktop app in this release, for
-  any purpose — not for the security dashboard (all analysis is computed
-  from your already-decrypted, already-local vault), not for update
-  checks (auto-update is not implemented yet — see ROADMAP.md and
-  SECURITY.md), not for anything else.
+- No network requests are made by the desktop app or the Android app in
+  this release, for any purpose — not for the security dashboard (all
+  analysis is computed from your already-decrypted, already-local
+  vault), not for update checks (auto-update is not implemented yet —
+  see ROADMAP.md and SECURITY.md), not for anything else. The Android
+  app requests no `INTERNET` permission at all (see its
+  `AndroidManifest.xml`) — it is not just unused, it is not requested.
 - Passwords, decrypted vault contents, and master passwords are never
   logged, and never leave process memory except as ciphertext written to
   your own vault file.

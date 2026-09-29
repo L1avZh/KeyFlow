@@ -73,7 +73,7 @@ Being explicit here matters more than being reassuring.
 - **A malicious browser extension already installed by the user.**
   Native messaging is scoped to KeyFlow's own extension by a pinned
   extension ID in the native-messaging host manifest's `allowed_origins`
-  (see `browser-extension/chrome/manifest.json`'s `key` field), but a
+  (see `apps/browser-extension/chrome/manifest.json`'s `key` field), but a
   different, unrelated malicious extension with broad page-content
   permissions could still scrape a form *after* KeyFlow has filled it —
   the same is true of every autofill mechanism, browser built-in ones

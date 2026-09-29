@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  KeyFlow makes zero network requests of its own (no server, no sync, no
+  telemetry — see PRIVACY.md). This config exists purely as defense in
+  depth: it forbids cleartext (unencrypted HTTP) traffic app-wide, so
+  that if a future dependency ever tried to make a network call, it
+  could not silently do so over plaintext HTTP.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

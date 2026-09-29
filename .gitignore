@@ -6,7 +6,7 @@ Cargo.lock.bak
 node_modules/
 apps/desktop/dist/
 apps/desktop/dist-ssr/
-browser-extension/chrome/dist/
+apps/browser-extension/chrome/dist/
 npm-debug.log*
 
 # Tauri
@@ -30,3 +30,17 @@ keyflow-export*.json
 
 # Icon build scratch
 apps/desktop/src-tauri/icons/icon-source.png.bak
+
+# Android
+apps/android/.gradle/
+apps/android/local.properties
+apps/android/signing.properties
+apps/android/*.keystore
+apps/android/*.jks
+apps/android/app/build/
+apps/android/app/.cxx/
+apps/android/build/
+apps/android/captures/
+apps/android/.kotlin/
+*.hprof
+crates/keyflow-mobile/target/

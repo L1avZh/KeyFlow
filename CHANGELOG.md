@@ -9,9 +9,9 @@ follows [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Browser extension for Chrome/Edge/Chromium (Manifest V3),
-  `browser-extension/chrome` — detects login forms and offers a
+  `apps/browser-extension/chrome` — detects login forms and offers a
   suggestion UI, backed by a real native-messaging bridge to the desktop
-  app. See [browser-extension/README.md](browser-extension/README.md).
+  app. See [apps/browser-extension/README.md](apps/browser-extension/README.md).
 - `keyflow-agent` crate: the shared request/response protocol, local
   agent-socket path resolution, and native-messaging wire framing used
   by both the desktop app and the new native host. 4 unit tests.
@@ -36,8 +36,8 @@ follows [Semantic Versioning](https://semver.org/).
 
 #### QA pass (2026-09-28): 8 confirmed bugs found and fixed
 
-Full details and severities in the QA report shared alongside this
-release; summary here for the changelog:
+Full details and severities in [`docs/qa-report-2026-09-28.md`](docs/qa-report-2026-09-28.md);
+summary here for the changelog:
 
 - **Security**: `Vault::create`/`change_master_password` had no
   server-side minimum-password-length enforcement — only the UI did.
